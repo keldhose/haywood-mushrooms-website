@@ -6,11 +6,12 @@ export default function Navbar() {
 
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
 
-        <Link href="/" className="flex items-center gap-3">
-          <img src="/logo.png" alt="Haywood Mushrooms" className="h-10"/>
-          <span className="text-xl font-bold text-emerald-900">
-            Haywood Mushrooms
-          </span>
+        <Link href="/" className="flex items-center">
+          <img
+            src="/logo.png"
+            alt="Haywood Mushrooms"
+            className="h-16"
+          />
         </Link>
 
         <div className="flex gap-6 text-sm font-medium">
