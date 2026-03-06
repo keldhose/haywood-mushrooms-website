@@ -4,8 +4,7 @@ export default function Navbar() {
   return (
     <nav className="w-full bg-white border-b border-stone-200">
 
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-
+      <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
         <Link href="/" className="flex items-center">
           <img
             src="/logo.png"

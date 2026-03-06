@@ -4,7 +4,7 @@ export default function Hero() {
 
       {/* Background Image */}
       <div
-        className="absolute inset-0 bg-cover bg-center scale-105"
+        className="absolute inset-0 bg-cover bg-center scale-105 brightness-75 blur-[1px]"
         style={{ backgroundImage: "url('/pink-oyster.png')" }}
       />
 
@@ -13,8 +13,7 @@ export default function Hero() {
 
       {/* Hero Content */}
       <div className="relative z-10 max-w-3xl px-6">
-
-        <h1 className="text-5xl md:text-6xl font-bold drop-shadow-lg">
+        <h1 className="text-5xl md:text-6xl font-bold drop-shadow-lg tracking-tight">
           Haywood Mushrooms
         </h1>
 
