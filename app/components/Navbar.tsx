@@ -11,10 +11,10 @@ export default function Navbar() {
           <Image
             src="/logo.png"
             alt="Haywood Mushrooms"
-            width={180}
-            height={60}
+            width={240} // Increase this to prevent blurriness
+            height={80}  // Increase this proportionally
             priority
-            className="h-20 w-auto hover:opacity-90 transition"
+            className="h-28 w-auto hover:opacity-90 transition" // Changed h-20 to h-28
           />
         </Link>
 
