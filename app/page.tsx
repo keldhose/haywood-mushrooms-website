@@ -11,6 +11,7 @@ import SpawnProcess from "./components/SpawnProcess";
 import Audience from "./components/Audience";
 import Species from "./components/Species";
 import Products from "./components/Products";
+import Contact from "./components/Contact"; // 1. Add this import
 import Footer from "./components/Footer";
 
 export default function Home() {
@@ -29,6 +30,7 @@ export default function Home() {
       <Audience />
       <Species />
       <Products />
+      <Contact /> {/* 2. Hook it here */}
       <Footer />
     </main>
   );
