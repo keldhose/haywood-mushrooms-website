@@ -47,7 +47,7 @@ export default function Contact() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Name</label>
-                  <input type="text" className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none" placeholder="Eldhose K." />
+                  <input type="text" className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none" placeholder="Your full name" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Email</label>
