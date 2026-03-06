@@ -42,38 +42,41 @@ export default function HaywoodMushroomsHomepage() {
 
       {/* HERO */}
 
-      <section id="home" className="max-w-6xl mx-auto px-6 py-24 text-center">
+      <section className="relative h-[75vh] flex items-center justify-center text-center text-white">
 
-        <h1 className="text-5xl md:text-6xl font-bold text-emerald-900">
-          Haywood Mushrooms
-        </h1>
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/pink-oyster.png')" }}
+        />
 
-        <p className="mt-4 text-xl text-stone-700">
-          Scientifically developed mushroom spawn
-        </p>
+        <div className="absolute inset-0 bg-black/60"></div>
 
-        <p className="mt-6 max-w-2xl mx-auto text-lg text-stone-600 leading-relaxed">
-          Premium mushroom spawn and fungal cultures developed by plant
-          pathologists and produced with rigorous sterile technique.
-          Based in Moncure, North Carolina.
-        </p>
+        <div className="relative z-10 max-w-3xl px-6">
 
-        <div className="mt-10 flex justify-center gap-4">
+          <h1 className="text-5xl md:text-6xl font-bold">
+            Haywood Mushrooms
+          </h1>
 
-          <button className="px-6 py-3 bg-emerald-900 text-white rounded-xl hover:bg-emerald-800 transition">
-            Explore Products
-          </button>
+          <p className="mt-4 text-xl">
+            Premium spawn developed by plant pathologists
+          </p>
 
-          <button className="px-6 py-3 border border-stone-400 rounded-xl hover:bg-stone-100 transition">
-            Learn About Us
-          </button>
+          <p className="mt-6 text-lg opacity-90">
+            Scientifically developed mushroom spawn produced with
+            rigorous sterile technique in Moncure, North Carolina.
+          </p>
 
+        </div>
+
+        {/* Photo Caption */}
+        <div className="absolute bottom-4 w-full text-center text-sm text-white/80 italic px-4">
+          Pink Oyster Mushrooms grown during early cultivation experiments at Haywood Mushrooms.
         </div>
 
       </section>
 
 
-      {/* ORIGIN STORY */}
+      {/* ORIGIN STORY */}}
 
       <section className="bg-white py-20">
 
