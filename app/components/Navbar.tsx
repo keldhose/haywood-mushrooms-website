@@ -3,21 +3,19 @@ import Link from "next/link";
 
 export default function Navbar() {
   return (
-    // "sticky top-0 z-50" keeps the bar at the top and ensures it stays above other content
     <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-stone-200">
-
-      <div className="max-w-7xl mx-auto px-6 py-3 flex justify-between items-center">
+      {/* Changed py-3 to py-1 to drastically reduce the white bar's thickness */}
+      <div className="max-w-7xl mx-auto px-6 py-1 flex justify-between items-center">
 
         <Link href="/" className="flex items-center">
           <Image
             src="/logo.png"
             alt="Haywood Mushrooms"
-            // Increased width/height props for better resolution at larger sizes
-            width={240} 
-            height={80}
+            width={200} 
+            height={60}
             priority
-            // Changed h-20 to h-28 for a more prominent logo
-            className="h-28 w-auto hover:opacity-90 transition" 
+            /* Reduced from h-28 to h-20 (80px) to slim the navbar profile */
+            className="h-20 w-auto hover:opacity-90 transition" 
           />
         </Link>
 
