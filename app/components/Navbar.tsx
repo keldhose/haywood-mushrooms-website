@@ -3,19 +3,20 @@ import Link from "next/link";
 
 export default function Navbar() {
   return (
-    <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-stone-200">
-      {/* Changed py-3 to py-1 to drastically reduce the white bar's thickness */}
-      <div className="max-w-7xl mx-auto px-6 py-1 flex justify-between items-center">
+    <nav className="sticky top-0 z-50 w-full bg-white border-b border-stone-200">
+      <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
 
-        <Link href="/" className="flex items-center">
+        {/* h-full ensures the Link and Image can stretch to the container height */}
+        <Link href="/" className="flex items-center h-full">
           <Image
             src="/logo.png"
             alt="Haywood Mushrooms"
-            width={200} 
-            height={60}
+            width={240} 
+            height={80}
             priority
-            /* Reduced from h-28 to h-20 (80px) to slim the navbar profile */
-            className="h-20 w-auto hover:opacity-90 transition" 
+            /* h-full makes the image touch the top and bottom borders */
+            /* py-1 provides a tiny sliver of breathing room if you don't want it literally touching the lines */
+            className="h-full w-auto object-contain py-1 hover:opacity-90 transition" 
           />
         </Link>
 
