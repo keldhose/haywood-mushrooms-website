@@ -3,7 +3,7 @@ export default function HaywoodMushroomsHomepage() {
   const products = [
     {
       name: "Lion's Mane Liquid Culture",
-      desc: "Fast‑colonizing lion's mane culture ideal for gourmet mushroom growers and specialty farms."
+      desc: "Fast-colonizing lion's mane culture ideal for gourmet mushroom growers and specialty farms."
     },
     {
       name: "Blue Oyster Liquid Culture",
@@ -19,9 +19,29 @@ export default function HaywoodMushroomsHomepage() {
 
     <main className="min-h-screen bg-stone-50 text-stone-900">
 
+      {/* NAVBAR */}
+
+      <nav className="w-full bg-white border-b border-stone-200">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+
+          <div className="text-xl font-bold text-emerald-900">
+            Haywood Mushrooms
+          </div>
+
+          <div className="flex gap-6 text-sm font-medium">
+            <a href="#home" className="hover:text-emerald-800">Home</a>
+            <a href="#science" className="hover:text-emerald-800">Science</a>
+            <a href="#products" className="hover:text-emerald-800">Products</a>
+            <a href="#contact" className="hover:text-emerald-800">Contact</a>
+          </div>
+
+        </div>
+      </nav>
+
+
       {/* HERO */}
 
-      <section className="max-w-6xl mx-auto px-6 py-24 text-center">
+      <section id="home" className="max-w-6xl mx-auto px-6 py-24 text-center">
 
         <h1 className="text-5xl md:text-6xl font-bold text-emerald-900">
           Haywood Mushrooms
@@ -52,9 +72,38 @@ export default function HaywoodMushroomsHomepage() {
       </section>
 
 
-      {/* SCIENCE SECTION */}
+      {/* ORIGIN STORY */}
 
       <section className="bg-white py-20">
+
+        <div className="max-w-5xl mx-auto px-6 text-center">
+
+          <h2 className="text-3xl font-semibold">
+            Our Origin
+          </h2>
+
+          <p className="mt-6 text-lg text-stone-600 leading-relaxed">
+            Haywood Mushrooms began with the purchase of agricultural land in
+            Moncure, North Carolina. What started as a plan for a small orchard
+            and herb garden evolved into a focused mushroom spawn business
+            built around deep fungal science expertise.
+          </p>
+
+          <p className="mt-6 text-lg text-stone-600 leading-relaxed">
+            Combining scientific training in plant pathology with engineering
+            systems thinking, we aim to produce reliable, clean, and
+            high‑quality mushroom spawn for growers across North Carolina
+            and beyond.
+          </p>
+
+        </div>
+
+      </section>
+
+
+      {/* SCIENCE SECTION */}
+
+      <section id="science" className="py-20">
 
         <div className="max-w-5xl mx-auto px-6 text-center">
 
@@ -63,16 +112,15 @@ export default function HaywoodMushroomsHomepage() {
           </h2>
 
           <p className="mt-6 text-lg text-stone-600 leading-relaxed">
-            Haywood Mushrooms was founded by a husband‑and‑wife team
-            combining agricultural science and engineering systems.
-            Our mission is to provide growers with reliable,
-            scientifically developed mushroom spawn.
+            Our approach to mushroom spawn production is grounded in
+            professional training in plant pathology and years of experience
+            studying fungi and plant‑microbe interactions.
           </p>
 
           <p className="mt-6 text-lg text-stone-600 leading-relaxed">
-            Our work is guided by professional training in plant pathology
-            and years of experience studying fungi and plant‑microbe
-            interactions.
+            We apply rigorous sterile technique, strain selection, and
+            quality control to ensure growers receive reliable cultures
+            and consistent results.
           </p>
 
         </div>
@@ -80,37 +128,76 @@ export default function HaywoodMushroomsHomepage() {
       </section>
 
 
-      {/* FOUNDER CREDIBILITY */}
+      {/* FOUNDER CREDENTIALS */}
 
-      <section className="py-20">
+      <section className="bg-white py-20">
 
         <div className="max-w-5xl mx-auto px-6 text-center">
 
           <h2 className="text-3xl font-semibold">
-            Scientific leadership
+            Scientific Leadership
           </h2>
 
           <p className="mt-6 text-lg text-stone-600">
-            Dr. Anna Thomas holds a PhD in Plant Pathology from
-            North Carolina State University and has extensive
-            experience studying fungi and plant‑microbe interactions.
+            Dr. Anna Thomas leads the scientific development of
+            Haywood Mushrooms.
           </p>
 
-          <div className="mt-8 grid md:grid-cols-3 gap-6 text-left">
+          <div className="mt-10 grid md:grid-cols-3 gap-6 text-left">
 
-            <div className="bg-white p-6 rounded-xl shadow">
+            <div className="bg-stone-50 p-6 rounded-xl shadow">
               <h3 className="font-semibold">PhD</h3>
-              <p className="text-stone-600">Plant Pathology – NC State University</p>
+              <p className="text-stone-600">Plant Pathology — NC State University</p>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow">
+            <div className="bg-stone-50 p-6 rounded-xl shadow">
               <h3 className="font-semibold">MS</h3>
-              <p className="text-stone-600">Plant Pathology – University of Georgia</p>
+              <p className="text-stone-600">Plant Pathology — University of Georgia</p>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow">
+            <div className="bg-stone-50 p-6 rounded-xl shadow">
               <h3 className="font-semibold">BSc</h3>
-              <p className="text-stone-600">Agriculture – UAS Bangalore</p>
+              <p className="text-stone-600">Agriculture — UAS Bangalore</p>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      {/* LAB QUALITY SECTION */}
+
+      <section className="py-20">
+
+        <div className="max-w-6xl mx-auto px-6 text-center">
+
+          <h2 className="text-3xl font-semibold">
+            Laboratory Quality Standards
+          </h2>
+
+          <p className="mt-6 text-lg text-stone-600 max-w-3xl mx-auto">
+            Every culture produced by Haywood Mushrooms is developed
+            using careful sterile technique, controlled laboratory
+            conditions, and scientific strain management.
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-8 mt-12">
+
+            <div className="p-8 bg-white rounded-2xl shadow">
+              <h3 className="font-semibold">Sterile Technique</h3>
+              <p className="mt-3 text-stone-600">Laminar flow hood and laboratory procedures reduce contamination risk.</p>
+            </div>
+
+            <div className="p-8 bg-white rounded-2xl shadow">
+              <h3 className="font-semibold">Strain Selection</h3>
+              <p className="mt-3 text-stone-600">High‑performance strains selected for reliability and yield.</p>
+            </div>
+
+            <div className="p-8 bg-white rounded-2xl shadow">
+              <h3 className="font-semibold">Quality Control</h3>
+              <p className="mt-3 text-stone-600">Each culture batch is monitored for vigor and purity.</p>
             </div>
 
           </div>
@@ -122,7 +209,7 @@ export default function HaywoodMushroomsHomepage() {
 
       {/* PRODUCTS */}
 
-      <section className="bg-white py-20">
+      <section id="products" className="bg-white py-20">
 
         <div className="max-w-6xl mx-auto px-6">
 
@@ -155,9 +242,9 @@ export default function HaywoodMushroomsHomepage() {
       </section>
 
 
-      {/* CONTACT CTA */}
+      {/* CONTACT */}
 
-      <section className="py-20">
+      <section id="contact" className="py-20">
 
         <div className="max-w-4xl mx-auto text-center px-6">
 
@@ -188,7 +275,7 @@ export default function HaywoodMushroomsHomepage() {
 
       <footer className="bg-stone-900 text-white py-10 text-center">
 
-        <p className="text-lg">
+        <p className="text-lg font-semibold">
           Haywood Mushrooms
         </p>
 
