@@ -3,35 +3,32 @@ import Link from "next/link";
 
 export default function Navbar() {
   return (
-    <nav className="w-full bg-white border-b border-stone-200">
+    // "sticky top-0 z-50" keeps the bar at the top and ensures it stays above other content
+    <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-stone-200">
 
-      <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-6 py-3 flex justify-between items-center">
 
         <Link href="/" className="flex items-center">
           <Image
             src="/logo.png"
             alt="Haywood Mushrooms"
-            width={240} // Increase this to prevent blurriness
-            height={80}  // Increase this proportionally
+            // Increased width/height props for better resolution at larger sizes
+            width={240} 
+            height={80}
             priority
-            className="h-28 w-auto hover:opacity-90 transition" // Changed h-20 to h-28
+            // Changed h-20 to h-28 for a more prominent logo
+            className="h-28 w-auto hover:opacity-90 transition" 
           />
         </Link>
 
-        <div className="flex gap-6 text-sm font-medium">
-
-          <Link href="#science">Science</Link>
-
-          <Link href="#products">Products</Link>
-
-          <Link href="/blog">Grow Guides</Link>
-
-          <Link href="#contact">Contact</Link>
-
+        <div className="flex gap-8 text-sm font-medium text-stone-700">
+          <Link href="#science" className="hover:text-green-800 transition">Science</Link>
+          <Link href="#products" className="hover:text-green-800 transition">Products</Link>
+          <Link href="/blog" className="hover:text-green-800 transition">Grow Guides</Link>
+          <Link href="#contact" className="hover:text-green-800 transition">Contact</Link>
         </div>
 
       </div>
-
     </nav>
   )
 }
