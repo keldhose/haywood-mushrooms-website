@@ -1,20 +1,17 @@
-import Image from "next/image";
-import Link from "next/link";
-
 export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full bg-white border-b border-stone-200">
-      {/* We set a fixed height (h-24) and removed py-3 */}
-      <div className="max-w-7xl mx-auto px-6 h-24 flex justify-between items-center">
+      {/* We use h-20 (80px) and zero padding to keep it slim */}
+      <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
 
         <Link href="/" className="flex items-center h-full py-2">
           <Image
             src="/logo.png"
             alt="Haywood Mushrooms"
-            width={300} // Increased to allow for more detail
-            height={100}
+            width={200} 
+            height={60}
             priority
-            /* h-full makes it fill the h-24 container */
+            /* h-full will now actually make the logo large because the file is cropped */
             className="h-full w-auto object-contain hover:opacity-90 transition" 
           />
         </Link>
@@ -25,7 +22,6 @@ export default function Navbar() {
           <Link href="/blog" className="hover:text-green-800 transition">Grow Guides</Link>
           <Link href="#contact" className="hover:text-green-800 transition">Contact</Link>
         </div>
-
       </div>
     </nav>
   )

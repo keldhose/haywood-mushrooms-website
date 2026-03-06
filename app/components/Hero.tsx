@@ -2,8 +2,7 @@ export default function Hero() {
   return (
     /* Added "mt-20" to match the h-20 height of your navbar */
     /* Adjusted h-[85vh] to calc(85vh - 5rem) to keep the overall proportion consistent */
-    <section className="relative mt-24 h-[calc(85vh-6rem)] flex items-center justify-center text-center text-white overflow-hidden">
-
+    <section className="relative pt-20 h-[85vh] flex items-center justify-center text-center text-white overflow-hidden">
       {/* Background Image - Pink Oyster from Cary experiments */}
       <div
         className="absolute inset-0 bg-cover bg-center scale-105 brightness-75 blur-[1px]"
