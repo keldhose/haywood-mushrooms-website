@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Navbar() {
@@ -5,11 +6,15 @@ export default function Navbar() {
     <nav className="w-full bg-white border-b border-stone-200">
 
       <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+
         <Link href="/" className="flex items-center">
-          <img
+          <Image
             src="/logo.png"
             alt="Haywood Mushrooms"
-            className="h-16"
+            width={180}
+            height={60}
+            priority
+            className="h-20 w-auto hover:opacity-90 transition"
           />
         </Link>
 
