@@ -1,8 +1,10 @@
 export default function Hero() {
   return (
-    <section className="relative h-[85vh] flex items-center justify-center text-center text-white overflow-hidden">
+    /* Added "mt-20" to match the h-20 height of your navbar */
+    /* Adjusted h-[85vh] to calc(85vh - 5rem) to keep the overall proportion consistent */
+    <section className="relative mt-24 h-[calc(85vh-6rem)] flex items-center justify-center text-center text-white overflow-hidden">
 
-      {/* Background Image */}
+      {/* Background Image - Pink Oyster from Cary experiments */}
       <div
         className="absolute inset-0 bg-cover bg-center scale-105 brightness-75 blur-[1px]"
         style={{ backgroundImage: "url('/pink-oyster.png')" }}
@@ -25,7 +27,6 @@ export default function Hero() {
           Scientifically developed mushroom spawn produced using rigorous
           sterile technique in Cary, North Carolina.
         </p>
-
       </div>
 
       {/* Caption */}
@@ -33,7 +34,7 @@ export default function Hero() {
         Pink Oyster Mushrooms grown during early cultivation experiments at Haywood Mushrooms.
       </div>
 
-      {/* Bottom fade transition */}
+      {/* Bottom fade transition to the stone-50 background of the next section */}
       <div className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-transparent to-stone-50"></div>
 
     </section>

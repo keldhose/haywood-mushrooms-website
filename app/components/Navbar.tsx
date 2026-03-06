@@ -4,19 +4,18 @@ import Link from "next/link";
 export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full bg-white border-b border-stone-200">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+      {/* We set a fixed height (h-24) and removed py-3 */}
+      <div className="max-w-7xl mx-auto px-6 h-24 flex justify-between items-center">
 
-        {/* h-full ensures the Link and Image can stretch to the container height */}
-        <Link href="/" className="flex items-center h-full">
+        <Link href="/" className="flex items-center h-full py-2">
           <Image
             src="/logo.png"
             alt="Haywood Mushrooms"
-            width={240} 
-            height={80}
+            width={300} // Increased to allow for more detail
+            height={100}
             priority
-            /* h-full makes the image touch the top and bottom borders */
-            /* py-1 provides a tiny sliver of breathing room if you don't want it literally touching the lines */
-            className="h-full w-auto object-contain py-1 hover:opacity-90 transition" 
+            /* h-full makes it fill the h-24 container */
+            className="h-full w-auto object-contain hover:opacity-90 transition" 
           />
         </Link>
 
