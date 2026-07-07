@@ -4,7 +4,7 @@ import { posts } from "./blog/posts";
 const BASE_URL = "https://www.haywoodmushrooms.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ["", "/strains", "/blog"].map((path) => ({
+  const staticRoutes = ["", "/strains", "/blog", "/contact"].map((path) => ({
     url: `${BASE_URL}${path}`,
     lastModified: new Date(),
   }));

@@ -1,16 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
   subsets: ["latin"],
+  weight: "variable",
+  style: ["normal", "italic"],
+  axes: ["opsz"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const hankenGrotesk = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
+
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.haywoodmushrooms.com"),
   title: "Haywood Mushrooms | Premium Mushroom Spawn & Fungal Cultures",
@@ -40,9 +53,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-
+      <body
+        className={`${newsreader.variable} ${hankenGrotesk.variable} ${ibmPlexMono.variable}`}
+      >
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -51,7 +64,7 @@ export default function RootLayout({
               "@type": "Organization",
               name: "Haywood Mushrooms",
               url: "https://www.haywoodmushrooms.com",
-              logo: "https://www.haywoodmushrooms.com/logo.png",
+              logo: "https://www.haywoodmushrooms.com/haywood-logo-primary.png",
               description:
                 "Haywood Mushrooms develops mushroom spawn and fungal cultures using scientific plant pathology methods.",
               founder: {
@@ -69,8 +82,9 @@ export default function RootLayout({
           }}
         />
 
+        <Navbar />
         {children}
-
+        <Footer />
       </body>
     </html>
   );

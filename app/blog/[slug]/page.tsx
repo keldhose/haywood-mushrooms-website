@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { posts } from "../posts";
 
 export function generateStaticParams() {
@@ -36,34 +37,36 @@ export default async function BlogPost({
     notFound();
   }
 
-  const blocks = post.content.trim().split(/\n\n+/);
-
   return (
-    <main className="max-w-3xl mx-auto py-20 px-6">
-      <h1 className="text-4xl font-bold mb-6">
-        {post.title}
-      </h1>
+    <main className="px-6 py-24 md:px-10">
+      <article className="mx-auto max-w-[720px]">
+        <Link href="/blog" className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted hover:text-forest">
+          ← Grow guides
+        </Link>
 
-      <p className="text-lg text-stone-600 mb-10">
-        {post.description}
-      </p>
+        <div className="mt-6 flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+          <span>{post.tag}</span>
+          <span>· {post.readTime}</span>
+        </div>
 
-      <article className="prose prose-lg">
-        {blocks.map((block) => {
-          const lines = block.split("\n").map((line) => line.trim());
-          const heading = /^Step \d+/.test(lines[0]) ? lines[0] : null;
-          const text = (heading ? lines.slice(1) : lines).join(" ");
+        <h1 className="mt-5 text-[clamp(32px,4vw,48px)] tracking-[-0.02em]">{post.title}</h1>
 
-          return (
-            <div key={block} className="mb-6">
-              {heading && (
-                <h2 className="text-2xl font-semibold mt-8 mb-2">{heading}</h2>
-              )}
-              <p className="text-stone-700 leading-relaxed">{text}</p>
-            </div>
-          );
-        })}
+        <p className="mt-6 text-[18px] leading-[1.6] text-muted">{post.description}</p>
+
+        <div className="mt-10 flex flex-col gap-6">
+          {post.body.map((block, i) =>
+            block.type === "h2" ? (
+              <h2 key={i} className="mt-4 font-serif text-[26px] text-ink">
+                {block.text}
+              </h2>
+            ) : (
+              <p key={i} className="text-[16px] leading-[1.7] text-muted">
+                {block.text}
+              </p>
+            )
+          )}
+        </div>
       </article>
     </main>
-  )
+  );
 }

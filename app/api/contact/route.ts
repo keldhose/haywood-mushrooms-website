@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { name, email, inquiryType, message } = (body ?? {}) as Record<string, unknown>;
+  const { name, email, inquiryType, operationSize, message } = (body ?? {}) as Record<string, unknown>;
 
   if (
     typeof name !== "string" || !name.trim() ||
@@ -42,6 +42,9 @@ export async function POST(request: Request) {
   const safeInquiryType = typeof inquiryType === "string" && inquiryType.trim()
     ? inquiryType
     : "General Question";
+  const safeOperationSize = typeof operationSize === "string" && operationSize.trim()
+    ? operationSize
+    : null;
 
   const resend = new Resend(apiKey);
 
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
       to: TO_EMAIL,
       replyTo: email,
       subject: `New inquiry: ${safeInquiryType} — ${name}`,
-      text: `Name: ${name}\nEmail: ${email}\nInquiry Type: ${safeInquiryType}\n\nMessage:\n${message}`,
+      text: `Name: ${name}\nEmail: ${email}\nInquiry Type: ${safeInquiryType}${safeOperationSize ? `\nOperation Size: ${safeOperationSize}` : ""}\n\nMessage:\n${message}`,
     });
 
     if (error) {

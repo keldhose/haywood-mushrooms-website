@@ -1,52 +1,44 @@
+const audiences = [
+  {
+    title: "Gourmet growers",
+    desc: "Reliable, clean spawn for small farms and commercial fruiting rooms that can't afford a bad flush.",
+  },
+  {
+    title: "Researchers & labs",
+    desc: "Traceable, well-characterized cultures for mycology research and controlled experimentation.",
+  },
+  {
+    title: "Agricultural innovators",
+    desc: "Strains and support for teams developing new cultivation systems and functional-mushroom products.",
+  },
+];
+
 export default function Audience() {
   return (
-    <section className="py-20 bg-stone-50">
-
-      <div className="max-w-6xl mx-auto px-6 text-center">
-
-        <h2 className="text-3xl font-semibold">
-          Who We Serve
-        </h2>
-
-        <p className="mt-6 text-lg text-stone-600 max-w-3xl mx-auto">
-          Haywood Mushrooms develops fungal cultures and spawn designed
-          to support growers, researchers, and agricultural innovators
-          working with gourmet and functional mushrooms.
-        </p>
-
-        <div className="grid md:grid-cols-3 gap-8 mt-12">
-
-          <div className="bg-white p-8 rounded-xl shadow">
-            <h3 className="font-semibold text-lg">
-              Gourmet Mushroom Growers
-            </h3>
-            <p className="mt-3 text-stone-600">
-              Reliable spawn for small farms and commercial mushroom production.
-            </p>
-          </div>
-
-          <div className="bg-white p-8 rounded-xl shadow">
-            <h3 className="font-semibold text-lg">
-              Researchers & Mycology Labs
-            </h3>
-            <p className="mt-3 text-stone-600">
-              High-quality cultures for fungal research and experimentation.
-            </p>
-          </div>
-
-          <div className="bg-white p-8 rounded-xl shadow">
-            <h3 className="font-semibold text-lg">
-              Agricultural Innovators
-            </h3>
-            <p className="mt-3 text-stone-600">
-              Strains suited for developing new mushroom cultivation systems.
-            </p>
-          </div>
-
+    <section className="bg-cream py-[76px] md:py-[120px]">
+      <div className="mx-auto max-w-[1200px] px-6 md:px-10">
+        <div className="max-w-[640px]">
+          <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-brass">Who we serve</span>
+          <h2 className="mt-[18px] text-[clamp(30px,3.6vw,46px)]">
+            Built for people who grow seriously.
+          </h2>
         </div>
 
+        <div className="mt-[52px] overflow-hidden rounded-[3px] border border-line bg-paper md:grid md:grid-cols-3">
+          {audiences.map((a, i) => (
+            <div
+              key={a.title}
+              className={`border-b border-line p-9 md:border-b-0 ${
+                i < audiences.length - 1 ? "md:border-r" : ""
+              }`}
+            >
+              <div className="font-mono text-[12px] text-brass">{String(i + 1).padStart(2, "0")}</div>
+              <div className="mt-5 font-serif text-[25px] text-ink">{a.title}</div>
+              <p className="mt-3 text-[14.5px] leading-[1.5] text-muted">{a.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
-
     </section>
-  )
+  );
 }
