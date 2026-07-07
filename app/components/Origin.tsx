@@ -28,8 +28,8 @@ export default function Origin() {
 
             <div className="p-6 bg-stone-50 border-l-4 border-green-700 rounded-r-xl">
               <p className="text-stone-700 italic">
-                "Today, those laboratory foundations are expanding toward a dedicated 
-                spawn and cultivation operation at our facility in Moncure, North Carolina".
+                &ldquo;Today, those laboratory foundations are expanding toward a dedicated
+                spawn and cultivation operation at our facility in Moncure, North Carolina.&rdquo;
               </p>
             </div>
           </div>

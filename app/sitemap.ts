@@ -1,18 +1,18 @@
 import type { MetadataRoute } from "next";
+import { posts } from "./blog/posts";
+
+const BASE_URL = "https://www.haywoodmushrooms.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    {
-      url: "https://www.haywoodmushrooms.com",
-      lastModified: new Date(),
-    },
-    {
-      url: "https://www.haywoodmushrooms.com/strains",
-      lastModified: new Date(),
-    },
-    {
-      url: "https://www.haywoodmushrooms.com/blog/how-to-grow-lions-mane",
-      lastModified: new Date(),
-    },
-  ];
+  const staticRoutes = ["", "/strains", "/blog"].map((path) => ({
+    url: `${BASE_URL}${path}`,
+    lastModified: new Date(),
+  }));
+
+  const postRoutes = Object.keys(posts).map((slug) => ({
+    url: `${BASE_URL}/blog/${slug}`,
+    lastModified: new Date(),
+  }));
+
+  return [...staticRoutes, ...postRoutes];
 }

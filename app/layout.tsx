@@ -12,6 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.haywoodmushrooms.com"),
   title: "Haywood Mushrooms | Premium Mushroom Spawn & Fungal Cultures",
   description:
     "Haywood Mushrooms develops premium mushroom spawn and fungal cultures using scientific plant pathology methods in Cary, North Carolina.",

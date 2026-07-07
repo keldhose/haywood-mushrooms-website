@@ -1,17 +1,60 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+
+type Status = "idle" | "submitting" | "success" | "error";
+
 export default function Contact() {
+  const [status, setStatus] = useState<Status>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setStatus("submitting");
+    setErrorMessage("");
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const payload = {
+      name: formData.get("name"),
+      email: formData.get("email"),
+      inquiryType: formData.get("inquiryType"),
+      message: formData.get("message"),
+    };
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Something went wrong. Please try again.");
+      }
+
+      setStatus("success");
+      form.reset();
+    } catch (err) {
+      setStatus("error");
+      setErrorMessage(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    }
+  }
+
   return (
     <section id="contact" className="py-24 bg-stone-900 text-white">
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid md:grid-cols-2 gap-16">
-          
+
           {/* Left Column: Information & Status */}
           <div>
             <h2 className="text-4xl font-bold tracking-tight">Connect with Our Lab</h2>
             <p className="mt-6 text-stone-400 text-lg leading-relaxed">
-              We are currently scaling our spawn production and laboratory operations in 
-              <strong> Moncure, North Carolina</strong>. 
+              We are currently scaling our spawn production and laboratory operations in
+              <strong> Moncure, North Carolina</strong>.
             </p>
-            
+
             <div className="mt-10 space-y-6">
               <div className="flex items-start gap-4">
                 <div className="mt-1 bg-green-700 p-2 rounded-md">
@@ -43,37 +86,77 @@ export default function Contact() {
           {/* Right Column: The Form */}
           <div className="bg-white p-8 md:p-10 rounded-2xl text-stone-900 shadow-2xl">
             <h3 className="text-2xl font-bold mb-6">Inquiry Form</h3>
-            <form className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Name</label>
-                  <input type="text" className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none" placeholder="Your full name" />
+
+            {status === "success" ? (
+              <p className="text-green-800 font-medium">
+                Thanks for reaching out — we&apos;ve received your inquiry and will be in touch soon.
+              </p>
+            ) : (
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      disabled={status === "submitting"}
+                      className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none disabled:opacity-60"
+                      placeholder="Your full name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      disabled={status === "submitting"}
+                      className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none disabled:opacity-60"
+                      placeholder="name@email.com"
+                    />
+                  </div>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Email</label>
-                  <input type="email" className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none" placeholder="name@email.com" />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Inquiry Type</label>
+                  <select
+                    name="inquiryType"
+                    disabled={status === "submitting"}
+                    className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none disabled:opacity-60"
+                  >
+                    <option>Gourmet Spawn Pre-order</option>
+                    <option>Research Cultures</option>
+                    <option>Bulk Substrate Inquiries</option>
+                    <option>General Question</option>
+                  </select>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Inquiry Type</label>
-                <select className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none">
-                  <option>Gourmet Spawn Pre-order</option>
-                  <option>Research Cultures</option>
-                  <option>Bulk Substrate Inquiries</option>
-                  <option>General Question</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Message</label>
+                  <textarea
+                    name="message"
+                    rows={4}
+                    required
+                    disabled={status === "submitting"}
+                    className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none disabled:opacity-60"
+                    placeholder="Tell us about your growing operation..."
+                  ></textarea>
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Message</label>
-                <textarea rows={4} className="w-full bg-stone-100 border-none rounded-lg p-3 focus:ring-2 focus:ring-green-700 outline-none" placeholder="Tell us about your growing operation..."></textarea>
-              </div>
+                {status === "error" && (
+                  <p className="text-red-700 text-sm font-medium">{errorMessage}</p>
+                )}
 
-              <button className="w-full bg-green-800 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition duration-300 shadow-lg shadow-green-900/20">
-                Submit Inquiry
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={status === "submitting"}
+                  className="w-full bg-green-800 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition duration-300 shadow-lg shadow-green-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {status === "submitting" ? "Sending..." : "Submit Inquiry"}
+                </button>
+              </form>
+            )}
           </div>
 
         </div>

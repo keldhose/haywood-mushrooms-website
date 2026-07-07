@@ -46,7 +46,7 @@ export default function StrainsPage() {
           </div>
 
           <div className="bg-white p-8 rounded-xl shadow">
-            <h2 className="text-xl font-semibold">Lion's Mane</h2>
+            <h2 className="text-xl font-semibold">Lion&apos;s Mane</h2>
             <p className="mt-3 text-stone-600">
               Hericium erinaceus – a gourmet and medicinal mushroom
               valued for culinary and functional uses.

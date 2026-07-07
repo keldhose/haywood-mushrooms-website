@@ -5,7 +5,7 @@ export default function Credibility() {
         <div>
           <h3 className="font-semibold text-lg">Scientific Expertise</h3>
           <p className="mt-2 text-emerald-100">
-            PhD Plant Pathology — NC State University
+            Led by a PhD plant pathologist
           </p>
         </div>
 

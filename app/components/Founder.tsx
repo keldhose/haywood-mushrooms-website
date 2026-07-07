@@ -1,11 +1,15 @@
+import Image from "next/image";
+
 export default function Founder() {
   return (
     <section className="bg-white py-20">
       <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
-        <img
+        <Image
           src="/lab-work.jpg"
           alt="Dr. Anna Thomas working in the lab"
-          className="rounded-xl shadow-lg w-full"
+          width={752}
+          height={576}
+          className="rounded-xl shadow-lg w-full h-auto"
         />
 
         <div>
@@ -17,17 +21,9 @@ export default function Founder() {
             extensive experience working with fungi.
           </p>
 
-          <div className="grid grid-cols-1 gap-4 mt-8">
-            <div className="bg-stone-50 p-4 rounded-lg shadow">
-              PhD — Plant Pathology, NC State University
-            </div>
-            <div className="bg-stone-50 p-4 rounded-lg shadow">
-              MS — Plant Pathology, University of Georgia
-            </div>
-            <div className="bg-stone-50 p-4 rounded-lg shadow">
-              BSc — Agriculture, UAS Bangalore
-            </div>
-          </div>
+          <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-green-800">
+            PhD, Plant Pathology — NC State University
+          </p>
         </div>
       </div>
     </section>
