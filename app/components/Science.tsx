@@ -1,7 +1,6 @@
 const credentials = [
   { degree: "PhD", field: "Plant Pathology", school: "NC State University" },
   { degree: "MS", field: "Plant Pathology", school: "University of Georgia" },
-  { degree: "BSc", field: "Agriculture", school: "UAS Bangalore" },
 ];
 
 const checklist = [
@@ -44,6 +43,7 @@ export default function Science() {
                 <div key={c.degree} className="rounded-[2px] border border-line bg-paper px-[18px] py-[14px]">
                   <div className="font-serif text-[22px] leading-none text-forest">{c.degree}</div>
                   <div className="mt-1 text-[14px] font-semibold">{c.field}</div>
+                  <div className="mt-0.5 font-mono text-[11px] text-muted">{c.school}</div>
                 </div>
               ))}
             </div>
