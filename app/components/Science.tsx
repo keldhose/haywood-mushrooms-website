@@ -31,7 +31,7 @@ export default function Science() {
           <div>
             <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-brass">The science</span>
             <h2 className="mt-[18px] text-[clamp(30px,3.6vw,46px)]">
-              Grown from plant pathology, not guesswork.
+              Grown from science, not guesswork.
             </h2>
             <p className="mt-6 max-w-[34em] text-[20px] leading-[1.55] text-muted">
               Most spawn fails for one reason: contamination that was invisible until it wasn&apos;t. Our work starts upstream of that — in the discipline of diagnosing and controlling fungal and microbial disease.
@@ -44,7 +44,6 @@ export default function Science() {
                 <div key={c.degree} className="rounded-[2px] border border-line bg-paper px-[18px] py-[14px]">
                   <div className="font-serif text-[22px] leading-none text-forest">{c.degree}</div>
                   <div className="mt-1 text-[14px] font-semibold">{c.field}</div>
-                  <div className="mt-0.5 font-mono text-[11px] text-muted">{c.school}</div>
                 </div>
               ))}
             </div>
