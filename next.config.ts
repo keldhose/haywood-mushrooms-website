@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // firebase-admin's auth module pulls in jwks-rsa -> jose, which ships as
+  // pure ESM. Turbopack's bundling of that chain breaks with ERR_REQUIRE_ESM
+  // in Vercel's serverless runtime. Leaving the package external (a native
+  // Node require() at runtime instead of a bundled import) avoids it.
+  serverExternalPackages: ["firebase-admin"],
   images: {
     remotePatterns: [
       {
