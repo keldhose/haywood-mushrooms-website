@@ -47,6 +47,7 @@ export default function StrainsPreview() {
                   src={strain.image}
                   alt={strain.name}
                   fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
                   className="object-cover transition-transform duration-[600ms] group-hover:scale-105"
                 />
                 <span className="absolute left-4 top-4 rounded-[2px] bg-cream/90 px-[11px] py-[6px] font-mono text-[10px] uppercase tracking-[0.16em] text-forest">

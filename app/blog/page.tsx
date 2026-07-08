@@ -109,7 +109,13 @@ function FeaturedCard({ slug, post }: { slug: string; post: (typeof posts)[strin
       className="mb-16 grid grid-cols-1 overflow-hidden rounded-[4px] border border-line bg-paper md:grid-cols-[1.1fr_0.9fr]"
     >
       <div className="relative min-h-[240px] bg-[#1a1512] md:min-h-[340px]">
-        <Image src="/agar-cultures.jpg" alt="Agar plates and culture tubes" fill className="object-cover" />
+        <Image
+          src="/agar-cultures.jpg"
+          alt="Agar plates and culture tubes"
+          fill
+          sizes="(max-width: 768px) 100vw, 55vw"
+          className="object-cover"
+        />
       </div>
       <div className="p-7 md:py-[52px] md:pl-2 md:pr-[52px]">
         <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">

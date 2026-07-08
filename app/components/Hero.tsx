@@ -36,6 +36,7 @@ export default function Hero() {
           alt="Pink oyster mushroom cluster grown at Haywood Mushrooms"
           fill
           priority
+          sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
         />
         <div className="absolute bottom-5 left-5 right-5 rounded-[2px] bg-[rgba(20,20,18,0.42)] px-[13px] py-[9px] font-mono text-[11px] text-white/90 backdrop-blur-md">

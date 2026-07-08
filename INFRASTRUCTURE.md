@@ -25,8 +25,13 @@ Current environment variables:
 |---|---|
 | `RESEND_API_KEY` | Auth for sending email via Resend (used by `/api/contact` and `/api/subscribe`) |
 | `CONTACT_FROM_EMAIL` | The "from" address for outgoing mail — set to a `@haywoodmushrooms.com` address now that the domain is verified in Resend |
+| `NEXT_PUBLIC_FIREBASE_*` (6 vars) | Firebase client config — public, safe to expose (see E-commerce section) |
+| `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Firebase Admin SDK service account — **secret** |
+| `STRIPE_SECRET_KEY` | Stripe API access (test-mode key currently — see E-commerce section) |
+| `STRIPE_WEBHOOK_SECRET` | Verifies incoming Stripe webhook events are genuine |
+| `SHIPPO_API_KEY` | Live shipping rate quotes |
 
-`.env.example` in the repo root documents these for local development.
+`.env.example` in the repo root documents all of these for local development. Never commit `.env.local` (it's gitignored) — paste secrets directly into it, not into chat when working with an AI assistant.
 
 ## Email — Resend
 
@@ -54,9 +59,59 @@ Both `POST` JSON to **`/api/contact`** (`app/api/contact/route.ts`), which:
 
 The **newsletter signup** (`app/components/NewsletterSignup.tsx`, on `/blog`) works the same way against **`/api/subscribe`** (`app/api/subscribe/route.ts`) — it just notifies `info@haywoodmushrooms.com` of the new email address; there's no separate mailing list tool wired up yet, so signups need to be added to a list manually for now.
 
+## E-commerce (accounts, shop, checkout, admin)
+
+Added 2026-07-08. Three new third-party services, all currently in **test/sandbox mode** — no real money moves and no real emails/SMS go to customers from these until deliberately switched to live/production credentials.
+
+### Firebase — accounts + database
+
+- **Project**: `haywood-mushrooms-45ab5` at console.firebase.google.com (same Google account, `keldhose@gmail.com`) — a *separate* project from the `kraftedlogic` business, deliberately, to keep data/billing isolated.
+- **Authentication**: Email/Password and Google sign-in enabled. Session model: client signs in with the Firebase client SDK → gets an ID token → `POST /api/auth/session` exchanges it for an httpOnly session cookie (`lib/auth/session.ts`, `app/api/auth/session/route.ts`). Protected routes (`/account`, `/admin`, `/checkout`) check this cookie in a `layout.tsx`, not `middleware.ts` (Firebase Admin SDK needs the Node runtime).
+- **Firestore**: Standard edition, `(default)` database. Three collections: `products`, `orders`, and implicitly `users` via Firebase Auth itself (no separate Firestore profile doc yet). No client-side Firestore reads/writes are used anywhere — everything goes through the Admin SDK on the server (`lib/firebase/admin.ts`), so Firestore's default production-mode security rules (deny-all) are fine as-is and have never been touched.
+- **Admin access**: not a role stored anywhere visible — it's a Firebase Auth **custom claim** (`admin: true`) on specific accounts. Manage it with:
+  - `npm run admin:grant -- someone@email.com` (they must have already signed up once)
+  - `npm run admin:revoke -- someone@email.com`
+  - `npm run admin:list` — see who currently has it
+  - **Important**: granting/revoking doesn't affect an already-issued session cookie — the account must log out and back in for the change to take effect.
+  - Current admins: `keldhose@gmail.com`, `info@haywoodmushrooms.com`.
+
+### Stripe — payments
+
+- **Account**: stripe.com, "Haywood Mushrooms sandbox" — currently using **test-mode** keys (`sk_test_...`). Switching to real payments later means creating live-mode keys in the same Stripe account (Stripe walks you through business verification at that point) and updating `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` in Vercel.
+- **Flow**: `/checkout` collects a shipping address and rate (see Shippo below) → `POST /api/checkout` creates a pending order in Firestore, then a Stripe Checkout Session (hosted payment page) → customer pays → Stripe's **webhook** (`POST /api/webhooks/stripe`, handling `checkout.session.completed`) is the actual source of truth that marks the order paid and decrements product stock — not the success-page redirect, which can't be trusted alone.
+- **Local webhook testing**: the Stripe CLI is installed (`stripe` command, via winget). `stripe listen --forward-to localhost:<port>/api/webhooks/stripe` forwards test events to your local dev server and prints a `whsec_...` secret to put in `.env.local` as `STRIPE_WEBHOOK_SECRET` — that secret is only valid while `stripe listen` is running, it's not the same as a real deployed webhook endpoint's secret.
+- **Production webhook**: not yet configured. Before going live, add a webhook endpoint in the Stripe dashboard pointed at `https://www.haywoodmushrooms.com/api/webhooks/stripe` (event: `checkout.session.completed`), and put *that* endpoint's signing secret in Vercel's `STRIPE_WEBHOOK_SECRET`.
+- Receipts are Stripe's own automatic emails — no custom invoice/PDF generation in this codebase.
+
+### Shippo — live shipping rates
+
+- **Account**: goshippo.com, API plan (free tier, 30 labels/month — we only fetch rate quotes, which are free regardless).
+- **Ship-from address** is hardcoded in `lib/shippo.ts` (`SHIP_FROM_ADDRESS`): 3121 Sentinel Ferry Ln, Cary, NC 27519.
+- Parcel dimensions are also a fixed estimate in `lib/shippo.ts` (`DEFAULT_PARCEL`, 10×8×6 in) — not per-product yet. Fine for grain spawn bags; revisit if very different product sizes get added.
+- US shipping only for now (`/checkout` collects a US address only).
+
+### Data model (Firestore)
+
+- **`products/{slug}`** — `name`, `scientificName`, `description`, `priceCents`, `stockQty`, `weightOz`, `imageUrl`, `active`. Doc ID is a URL slug (e.g. `pink-oyster-grain-spawn-1lb`). Seeded initially via `npm run db:seed` (`scripts/seed-products.ts`) with the real starting catalog; managed going forward via `/admin/products`.
+- **`orders/{autoId}`** — `userId`, `userEmail`, `items[]` (name/price/qty *snapshot* at purchase time, not a live reference), `subtotalCents`/`shippingCents`/`totalCents`, `shippingAddress`, `shippingRate`, `status` (`pending`→`paid`→`fulfilled`, or `cancelled`), `trackingNumber`, `stripeCheckoutSessionId`/`stripePaymentIntentId`, `createdAt`.
+- Prices/weights/stock are always re-derived server-side from Firestore at checkout time (`lib/products.ts` → `getProductsByIds`) — cart contents from the browser are treated as an (id, qty) wishlist only, never trusted for the actual charge. Same for the shipping rate: the client sends back a Shippo rate ID, and the server re-fetches that rate's authoritative amount from Shippo (`shippo.rates.get`) rather than trusting a client-supplied amount.
+
+### Site map of the e-commerce pages
+
+- `/signup`, `/login` — Firebase email/password + Google auth
+- `/account`, `/account/orders`, `/account/orders/[id]` — customer's own profile + order history
+- `/shop`, `/shop/[slug]` — product catalog (separate from the marketing-only `/strains` page)
+- `/cart`, `/checkout` — client-side cart (React Context + localStorage) → address/shipping/payment
+- `/admin`, `/admin/products`, `/admin/products/new`, `/admin/products/[id]`, `/admin/orders`, `/admin/orders/[id]` — admin-only (see Admin access above)
+
 ## Quick troubleshooting
 
 - **Contact form says "Email delivery is not configured"**: `RESEND_API_KEY` is missing on Vercel — see Hosting section above.
 - **Form succeeds but no email arrives**: check Resend → Logs for delivery status, then check spam.
 - **Want to change site content/design**: edit code, push to `main`, Vercel deploys automatically. No manual build/upload step.
 - **Want to change the contact/notification email address**: currently hardcoded as `TO_EMAIL` in `app/api/contact/route.ts` and `app/api/subscribe/route.ts`.
+- **Logged in but `/admin` redirects to `/account`**: the admin custom claim was granted/changed after this session's cookie was issued — log out and back in.
+- **Google sign-in works but logs noisy "Cross-Origin-Opener-Policy" console errors**: known cosmetic Firebase + Chrome popup interaction, not a bug — auth still completes correctly. Only a full fix would be switching from `signInWithPopup` to `signInWithRedirect` in `app/login/page.tsx` / `app/signup/page.tsx`, trading the popup UX for a full-page redirect.
+- **Order stuck on "pending" after a real payment**: the Stripe webhook didn't reach us. In production, check Stripe dashboard → Developers → Webhooks → your endpoint → recent events for delivery failures. Locally, this means `stripe listen` wasn't running during the test.
+- **Checkout fails at the shipping-rate step**: check the address is a real, deliverable US address — Shippo/USPS reject nonsense addresses. Check Shippo dashboard → Logs for the actual carrier error if unsure.
+- **Need to reseed or bulk-edit product data**: edit `scripts/seed-products.ts` and rerun `npm run db:seed` — it upserts by slug, safe to rerun.
