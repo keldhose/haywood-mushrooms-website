@@ -92,7 +92,7 @@ Added 2026-07-08. Three new third-party services, all currently in **test/sandbo
 
 ### Data model (Firestore)
 
-- **`products/{slug}`** — `name`, `scientificName`, `description`, `priceCents`, `stockQty`, `weightOz`, `imageUrl`, `active`. Doc ID is a URL slug (e.g. `pink-oyster-grain-spawn-1lb`). Seeded initially via `npm run db:seed` (`scripts/seed-products.ts`) with the real starting catalog; managed going forward via `/admin/products`.
+- **`products/{slug}`** — `name`, `scientificName`, `description`, `priceCents`, `stockQty`, `weightOz`, `imageUrls[]` (photos in display order — first one is the cover/catalog image, reorderable in the admin form via "Set cover"), `active`. Doc ID is a URL slug (e.g. `pink-oyster-grain-spawn-1lb`). Seeded initially via `npm run db:seed` (`scripts/seed-products.ts`) with the real starting catalog; managed going forward via `/admin/products`. Photo uploads go to Firebase Storage (`products/` path in the `haywood-mushrooms-45ab5.firebasestorage.app` bucket) via `POST /api/admin/products/upload` — requires the Firebase project to be on the **Blaze** (pay-as-you-go) plan; Storage isn't available on the free Spark plan.
 - **`orders/{autoId}`** — `userId`, `userEmail`, `items[]` (name/price/qty *snapshot* at purchase time, not a live reference), `subtotalCents`/`shippingCents`/`totalCents`, `shippingAddress`, `shippingRate`, `status` (`pending`→`paid`→`fulfilled`, or `cancelled`), `trackingNumber`, `stripeCheckoutSessionId`/`stripePaymentIntentId`, `createdAt`.
 - Prices/weights/stock are always re-derived server-side from Firestore at checkout time (`lib/products.ts` → `getProductsByIds`) — cart contents from the browser are treated as an (id, qty) wishlist only, never trusted for the actual charge. Same for the shipping rate: the client sends back a Shippo rate ID, and the server re-fetches that rate's authoritative amount from Shippo (`shippo.rates.get`) rather than trusting a client-supplied amount.
 
@@ -102,7 +102,16 @@ Added 2026-07-08. Three new third-party services, all currently in **test/sandbo
 - `/account`, `/account/orders`, `/account/orders/[id]` — customer's own profile + order history
 - `/shop`, `/shop/[slug]` — product catalog (separate from the marketing-only `/strains` page)
 - `/cart`, `/checkout` — client-side cart (React Context + localStorage) → address/shipping/payment
-- `/admin`, `/admin/products`, `/admin/products/new`, `/admin/products/[id]`, `/admin/orders`, `/admin/orders/[id]` — admin-only (see Admin access above)
+- `/admin`, `/admin/products` (create/edit is a modal on this page, not separate routes), `/admin/orders`, `/admin/orders/[id]` — admin-only (see Admin access above)
+
+### Deploying this e-commerce layer for the first time — two real gotchas hit on 2026-07-08
+
+Both caused the production build/runtime to fail even though everything worked locally. Documented here so a future deploy (or a fresh environment) doesn't lose time rediscovering them.
+
+1. **`FIREBASE_PRIVATE_KEY` pasted into Vercel with stray wrapping quotes.** In `.env.local` the value is wrapped in double quotes (`FIREBASE_PRIVATE_KEY="-----BEGIN...-----\n"`) because `dotenv` needs that to parse a value containing literal `\n` sequences. Vercel's environment variable field does **no such stripping** — it's a raw literal string. Copying the value including those outer `"..."` quotes corrupts the key and fails with `Error: Failed to parse private key` at build time (during "Collecting page data", since `lib/firebase/admin.ts` evaluates the Admin SDK eagerly at module import). Fix: the value in Vercel must start exactly with `-----BEGIN PRIVATE KEY-----` and end with `-----END PRIVATE KEY-----\n` — no leading/trailing `"` characters — while keeping the literal `\n` sequences in the middle as-is.
+2. **`jose` (a transitive dependency via `firebase-admin` → `jwks-rsa`) resolved to v6, which dropped CommonJS support entirely.** `jwks-rsa` still does a plain `require("jose")`; jose v6 is pure ESM with no `require` export condition, so this throws `ERR_REQUIRE_ESM` — but only in Vercel's serverless runtime, not in local `next build`/`next start`, which is what made it confusing. It broke every route touching `lib/firebase/admin.ts` (`/admin`, `/account`, `/shop/[slug]`, etc.) with a generic 500. Fix: pinned via npm `overrides` in `package.json` to `"jose": "^5.10.0"` — v5 still ships a proper CJS build (v6 doesn't). Adding `serverExternalPackages: ["firebase-admin"]` in `next.config.ts` was tried first and is harmless to keep, but did **not** fix this on its own — the `jose` pin was the actual fix.
+
+**If a production 500 shows up with no useful detail in the Vercel dashboard's Build Logs panel** (it silently truncates before the real error in some cases): the **Vercel CLI** is installed locally (`npx vercel`, already authenticated as of 2026-07-08 via `npx vercel login`). `npx vercel logs <url> --status-code 500 --expand` gets the full untruncated runtime error directly, which is far more reliable than scrolling the dashboard UI.
 
 ## Quick troubleshooting
 
