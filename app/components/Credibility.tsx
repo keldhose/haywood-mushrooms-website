@@ -1,8 +1,8 @@
 const stats = [
   {
     label: "Led by",
-    value: "PhD, Plant Pathology",
-    detail: "NC State University — fungi & plant–microbe science",
+    value: "Industry experts",
+    detail: "Decades of combined fungal & plant-microbe science",
   },
   {
     label: "Method",
