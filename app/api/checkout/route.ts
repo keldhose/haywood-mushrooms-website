@@ -100,6 +100,7 @@ export async function POST(request: Request) {
       customer_email: user.email,
       client_reference_id: orderId,
       metadata: { orderId },
+      allow_promotion_codes: true,
       line_items: [
         ...orderItems.map((item) => ({
           price_data: {

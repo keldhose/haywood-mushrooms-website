@@ -31,10 +31,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true });
     }
 
+    const discountCents = session.total_details?.amount_discount ?? 0;
+
     try {
       await markOrderPaid(orderId, {
         stripeCheckoutSessionId: session.id,
         stripePaymentIntentId: (session.payment_intent as string) ?? "",
+        discountCents: discountCents > 0 ? discountCents : undefined,
+        totalCents: session.amount_total ?? undefined,
       });
     } catch (err) {
       console.error(`Failed to mark order ${orderId} paid:`, err);

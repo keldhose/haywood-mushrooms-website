@@ -29,6 +29,35 @@ export default function CheckoutPage() {
   const [payingNow, setPayingNow] = useState(false);
   const [error, setError] = useState("");
 
+  const [promoCode, setPromoCode] = useState("");
+  const [promoChecking, setPromoChecking] = useState(false);
+  const [promoApplied, setPromoApplied] = useState<{ code: string; description: string } | null>(null);
+  const [promoError, setPromoError] = useState("");
+
+  async function handleApplyPromo() {
+    if (!promoCode.trim()) return;
+    setPromoChecking(true);
+    setPromoError("");
+    setPromoApplied(null);
+
+    try {
+      const res = await fetch("/api/promo-code/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "That code isn't valid.");
+      }
+      setPromoApplied({ code: data.code, description: data.description });
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setPromoChecking(false);
+    }
+  }
+
   useEffect(() => {
     if (items.length === 0) {
       router.replace("/cart");
@@ -249,6 +278,38 @@ export default function CheckoutPage() {
               <span className="text-muted">Shipping</span>
               <span className="text-ink">{selectedRate ? `$${(selectedRate.amountCents / 100).toFixed(2)}` : "—"}</span>
             </div>
+
+            {promoApplied ? (
+              <div className="mt-4 flex items-center gap-2 rounded-[2px] border border-forest/30 bg-cream px-3 py-2.5 text-[13px] text-forest">
+                <span>✓</span>
+                <span>
+                  <b>{promoApplied.code}</b> applied — {promoApplied.description}
+                </span>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Promo code"
+                    className="w-0 flex-1 rounded-[2px] border border-line bg-cream p-[10px] text-[13.5px] uppercase outline-none focus:border-forest"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    disabled={promoChecking || !promoCode.trim()}
+                    className="rounded-[2px] border border-forest px-[16px] py-[10px] text-[13px] font-semibold text-forest transition hover:bg-forest hover:text-paper disabled:opacity-60"
+                  >
+                    {promoChecking ? "Checking…" : "Apply"}
+                  </button>
+                </div>
+                {promoError && <p className="mt-1.5 text-[12px] font-medium text-red-700">{promoError}</p>}
+                <p className="mt-1.5 text-[12px] text-muted">Have a code? You can also enter it at payment.</p>
+              </div>
+            )}
+
             <div className="mt-3 flex justify-between border-t border-line pt-3">
               <span className="font-semibold text-ink">Total</span>
               <span className="font-serif text-[22px] text-ink">${(totalCents / 100).toFixed(2)}</span>

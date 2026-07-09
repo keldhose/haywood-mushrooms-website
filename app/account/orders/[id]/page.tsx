@@ -71,6 +71,12 @@ export default async function OrderDetailPage({
             </span>
             <span className="text-ink">${(order.shippingCents / 100).toFixed(2)}</span>
           </div>
+          {order.discountCents ? (
+            <div className="mt-2 flex justify-between text-[14.5px]">
+              <span className="text-forest">Discount</span>
+              <span className="text-forest">−${(order.discountCents / 100).toFixed(2)}</span>
+            </div>
+          ) : null}
           <div className="mt-3 flex justify-between border-t border-line pt-3">
             <span className="font-semibold text-ink">Total</span>
             <span className="font-serif text-[22px] text-ink">${(order.totalCents / 100).toFixed(2)}</span>

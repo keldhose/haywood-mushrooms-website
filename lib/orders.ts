@@ -45,6 +45,8 @@ export type Order = {
   trackingNumber?: string;
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?: string;
+  /** Set from Stripe's completed session when a promotion code was applied at payment. totalCents already reflects it. */
+  discountCents?: number;
   createdAt: Date | null;
 };
 
@@ -64,6 +66,7 @@ function toOrder(id: string, data: FirebaseFirestore.DocumentData): Order {
     trackingNumber: data.trackingNumber,
     stripeCheckoutSessionId: data.stripeCheckoutSessionId,
     stripePaymentIntentId: data.stripePaymentIntentId,
+    discountCents: data.discountCents,
     createdAt: createdAt ? createdAt.toDate() : null,
   };
 }
@@ -94,7 +97,14 @@ export async function createPendingOrder(input: {
  */
 export async function markOrderPaid(
   orderId: string,
-  stripeIds: { stripeCheckoutSessionId: string; stripePaymentIntentId: string }
+  stripeIds: {
+    stripeCheckoutSessionId: string;
+    stripePaymentIntentId: string;
+    /** Present when a promotion code was applied at Stripe's hosted checkout. */
+    discountCents?: number;
+    /** The amount Stripe actually charged, reconciled onto the order when a discount was applied. */
+    totalCents?: number;
+  }
 ): Promise<void> {
   const orderRef = adminDb.collection("orders").doc(orderId);
 
@@ -135,7 +145,10 @@ export async function markOrderPaid(
 
     tx.update(orderRef, {
       status: "paid" satisfies OrderStatus,
-      ...stripeIds,
+      stripeCheckoutSessionId: stripeIds.stripeCheckoutSessionId,
+      stripePaymentIntentId: stripeIds.stripePaymentIntentId,
+      ...(stripeIds.discountCents !== undefined ? { discountCents: stripeIds.discountCents } : {}),
+      ...(stripeIds.totalCents !== undefined ? { totalCents: stripeIds.totalCents } : {}),
       updatedAt: FieldValue.serverTimestamp(),
     });
 

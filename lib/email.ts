@@ -95,6 +95,14 @@ function orderItemsTable(order: Order): string {
       <td style="padding:0 20px 12px;font-size:13.5px;color:${COLORS.muted};">Shipping &mdash; ${order.shippingRate.provider} ${order.shippingRate.service}</td>
       <td style="padding:0 20px 12px;text-align:right;font-size:13.5px;color:${COLORS.muted};">$${(order.shippingCents / 100).toFixed(2)}</td>
     </tr>
+    ${
+      order.discountCents
+        ? `<tr>
+      <td style="padding:0 20px 12px;font-size:13.5px;color:${COLORS.forest};">Discount</td>
+      <td style="padding:0 20px 12px;text-align:right;font-size:13.5px;color:${COLORS.forest};">&minus;$${(order.discountCents / 100).toFixed(2)}</td>
+    </tr>`
+        : ""
+    }
     <tr>
       <td style="padding:16px 20px 18px;border-top:1px solid ${COLORS.line};font-size:15px;font-weight:600;color:${COLORS.ink};">Total</td>
       <td style="padding:16px 20px 18px;border-top:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:20px;color:${COLORS.ink};">$${(order.totalCents / 100).toFixed(2)}</td>
