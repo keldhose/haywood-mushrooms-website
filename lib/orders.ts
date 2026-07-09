@@ -9,6 +9,8 @@ export type OrderItem = {
   variantLabel?: string;
   name: string;
   priceCents: number;
+  /** Snapshot of the item's per-unit weight at checkout, for buying a shipping label later. Absent on orders placed before this existed. */
+  weightOz?: number;
   qty: number;
 };
 
@@ -43,6 +45,9 @@ export type Order = {
   shippingRate: ShippingRate;
   status: OrderStatus;
   trackingNumber?: string;
+  /** Set once a shipping label has been purchased for this order via the admin "Buy label" action. */
+  labelUrl?: string;
+  shippingLabelCostCents?: number;
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?: string;
   /** Set from Stripe's completed session when a promotion code was applied at payment. totalCents already reflects it. */
@@ -77,6 +82,8 @@ function toOrder(id: string, data: FirebaseFirestore.DocumentData): Order {
     shippingRate: data.shippingRate,
     status: data.status,
     trackingNumber: data.trackingNumber,
+    labelUrl: data.labelUrl,
+    shippingLabelCostCents: data.shippingLabelCostCents,
     stripeCheckoutSessionId: data.stripeCheckoutSessionId,
     stripePaymentIntentId: data.stripePaymentIntentId,
     discountCents: data.discountCents,
@@ -354,4 +361,21 @@ export async function updateOrderStatus(
       console.error(`Failed to send shipped email for order ${orderId}:`, err);
     }
   }
+}
+
+/**
+ * Admin-only: records a purchased shipping label. Reuses updateOrderStatus
+ * for the tracking-number-triggers-the-shipped-email logic (never fires
+ * twice), then attaches the label URL/cost in a second write.
+ */
+export async function attachShippingLabel(
+  orderId: string,
+  label: { trackingNumber: string; labelUrl: string; costCents: number }
+): Promise<void> {
+  await updateOrderStatus(orderId, { trackingNumber: label.trackingNumber });
+  await adminDb.collection("orders").doc(orderId).update({
+    labelUrl: label.labelUrl,
+    shippingLabelCostCents: label.costCents,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
 }

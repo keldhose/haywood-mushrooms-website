@@ -78,6 +78,7 @@ export async function POST(request: Request) {
       variantLabel: variant.label || undefined,
       name: product.name,
       priceCents: variant.priceCents,
+      weightOz: variant.weightOz,
       qty: item.qty,
     });
   }

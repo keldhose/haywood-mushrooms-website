@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { shippo, SHIP_FROM_ADDRESS, DEFAULT_PARCEL } from "@/lib/shippo";
+import { shippo, SHIP_FROM_ADDRESS, DEFAULT_PARCEL, curateCustomerRates } from "@/lib/shippo";
 import { getProductsByIds, getVariant } from "@/lib/products";
 import { releaseExpiredPendingOrders } from "@/lib/orders";
 
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       async: false,
     });
 
-    const rates = (shipment.rates ?? [])
+    const allRates = (shipment.rates ?? [])
       .map((rate) => ({
         id: rate.objectId,
         provider: rate.provider,
@@ -90,8 +90,11 @@ export async function POST(request: Request) {
         amountCents: Math.round(parseFloat(rate.amount) * 100),
         estimatedDays: rate.estimatedDays,
       }))
-      .filter((rate) => Number.isFinite(rate.amountCents))
-      .sort((a, b) => a.amountCents - b.amountCents);
+      .filter((rate) => Number.isFinite(rate.amountCents));
+
+    // Customers see a curated pick (cheapest + one meaningfully faster
+    // option), not every service tier a carrier offers.
+    const rates = curateCustomerRates(allRates);
 
     if (rates.length === 0) {
       return NextResponse.json(

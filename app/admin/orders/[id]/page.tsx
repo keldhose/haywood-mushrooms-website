@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getOrderById } from "@/lib/orders";
 import OrderStatusForm from "../OrderStatusForm";
+import BuyShippingLabel from "../BuyShippingLabel";
 
 export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -78,8 +79,9 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
           <OrderStatusForm orderId={order.id} status={order.status} trackingNumber={order.trackingNumber} />
+          <BuyShippingLabel order={order} />
         </div>
       </div>
     </main>
