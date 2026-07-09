@@ -9,7 +9,8 @@ type VariantDraft = {
   label: string;
   price: string;
   stockQty: string;
-  weightOz: string;
+  /** Displayed/entered in pounds; converted to weightOz (the storage unit) on submit. */
+  weightLb: string;
 };
 
 export default function ProductForm({
@@ -30,7 +31,7 @@ export default function ProductForm({
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(product ? (product.priceCents / 100).toFixed(2) : "");
   const [stockQty, setStockQty] = useState(product?.stockQty.toString() ?? "0");
-  const [weightOz, setWeightOz] = useState(product?.weightOz.toString() ?? "");
+  const [weightLb, setWeightLb] = useState(product ? (product.weightOz / 16).toString() : "");
   const [imageUrls, setImageUrls] = useState<string[]>(product?.imageUrls ?? []);
   const [active, setActive] = useState(product?.active ?? true);
   const [variants, setVariants] = useState<VariantDraft[]>(
@@ -39,7 +40,7 @@ export default function ProductForm({
       label: v.label,
       price: (v.priceCents / 100).toFixed(2),
       stockQty: v.stockQty.toString(),
-      weightOz: v.weightOz.toString(),
+      weightLb: (v.weightOz / 16).toString(),
     }))
   );
 
@@ -47,6 +48,10 @@ export default function ProductForm({
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+
+  // Once a product has variants, price/stock/weight are set per variant —
+  // the base fields below are never read by the storefront or checkout.
+  const hasVariants = variants.length > 0;
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -86,7 +91,7 @@ export default function ProductForm({
   function addVariant() {
     setVariants((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), label: "", price: "", stockQty: "0", weightOz: "" },
+      { id: crypto.randomUUID(), label: "", price: "", stockQty: "0", weightLb: "" },
     ]);
   }
 
@@ -124,16 +129,16 @@ export default function ProductForm({
         label: v.label.trim(),
         priceCents: Math.round(parseFloat(v.price) * 100),
         stockQty: parseInt(v.stockQty, 10) || 0,
-        weightOz: parseFloat(v.weightOz) || 0,
+        weightOz: (parseFloat(v.weightLb) || 0) * 16,
       }));
 
     const payload = {
       name,
       scientificName,
       description,
-      priceCents: Math.round(parseFloat(price) * 100),
-      stockQty: parseInt(stockQty, 10),
-      weightOz: parseFloat(weightOz),
+      priceCents: hasVariants ? 0 : Math.round(parseFloat(price) * 100),
+      stockQty: hasVariants ? 0 : parseInt(stockQty, 10),
+      weightOz: hasVariants ? 0 : parseFloat(weightLb) * 16,
       imageUrls,
       active,
       variants: cleanVariants,
@@ -223,44 +228,50 @@ export default function ProductForm({
         />
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-4">
-        <div>
-          <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Price ($)</label>
-          <input
-            type="number"
-            required
-            min="0"
-            step="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full rounded-[2px] border border-line bg-paper p-[12px] text-[15px] outline-none focus:border-forest"
-          />
+      {hasVariants ? (
+        <p className="mt-4 text-[12.5px] text-muted">
+          Price, stock, and weight are set per variant below — this product has {variants.length}.
+        </p>
+      ) : (
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <div>
+            <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Price ($)</label>
+            <input
+              type="number"
+              required
+              min="0"
+              step="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="w-full rounded-[2px] border border-line bg-paper p-[12px] text-[15px] outline-none focus:border-forest"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Stock qty</label>
+            <input
+              type="number"
+              required
+              min="0"
+              step="1"
+              value={stockQty}
+              onChange={(e) => setStockQty(e.target.value)}
+              className="w-full rounded-[2px] border border-line bg-paper p-[12px] text-[15px] outline-none focus:border-forest"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Weight (lb)</label>
+            <input
+              type="number"
+              required
+              min="0"
+              step="0.1"
+              value={weightLb}
+              onChange={(e) => setWeightLb(e.target.value)}
+              className="w-full rounded-[2px] border border-line bg-paper p-[12px] text-[15px] outline-none focus:border-forest"
+            />
+          </div>
         </div>
-        <div>
-          <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Stock qty</label>
-          <input
-            type="number"
-            required
-            min="0"
-            step="1"
-            value={stockQty}
-            onChange={(e) => setStockQty(e.target.value)}
-            className="w-full rounded-[2px] border border-line bg-paper p-[12px] text-[15px] outline-none focus:border-forest"
-          />
-        </div>
-        <div>
-          <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Weight (oz)</label>
-          <input
-            type="number"
-            required
-            min="0"
-            step="0.1"
-            value={weightOz}
-            onChange={(e) => setWeightOz(e.target.value)}
-            className="w-full rounded-[2px] border border-line bg-paper p-[12px] text-[15px] outline-none focus:border-forest"
-          />
-        </div>
-      </div>
+      )}
 
       <div className="mt-4">
         <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
@@ -374,14 +385,14 @@ export default function ProductForm({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Weight (oz)</label>
+                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Weight (lb)</label>
                   <input
                     type="number"
                     required
                     min="0"
                     step="0.1"
-                    value={v.weightOz}
-                    onChange={(e) => updateVariant(v.id, { weightOz: e.target.value })}
+                    value={v.weightLb}
+                    onChange={(e) => updateVariant(v.id, { weightLb: e.target.value })}
                     className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
                   />
                 </div>

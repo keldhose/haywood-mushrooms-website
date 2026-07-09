@@ -45,16 +45,24 @@ export function validateProductPayload(body: unknown) {
     : [];
 
   const cleanVariants = validateVariants(variants);
+  // Base price/stock/weight are only meaningful — and required — for a
+  // product with no variants. A variant product is priced/stocked/weighed
+  // per variant; the base fields are unused everywhere they'd be read.
+  const hasVariants = cleanVariants !== null && cleanVariants.length > 0;
+
+  const baseNumbersValid = hasVariants
+    ? true
+    : typeof priceCents === "number" && Number.isFinite(priceCents) && priceCents >= 0 &&
+      typeof stockQty === "number" && Number.isFinite(stockQty) && stockQty >= 0 &&
+      typeof weightOz === "number" && Number.isFinite(weightOz) && weightOz > 0;
 
   if (
     typeof name !== "string" || !name.trim() ||
     typeof scientificName !== "string" || !scientificName.trim() ||
     typeof description !== "string" || !description.trim() ||
     cleanImageUrls.length === 0 ||
-    typeof priceCents !== "number" || !Number.isFinite(priceCents) || priceCents < 0 ||
-    typeof stockQty !== "number" || !Number.isFinite(stockQty) || stockQty < 0 ||
-    typeof weightOz !== "number" || !Number.isFinite(weightOz) || weightOz <= 0 ||
-    cleanVariants === null
+    cleanVariants === null ||
+    !baseNumbersValid
   ) {
     return null;
   }
@@ -63,9 +71,9 @@ export function validateProductPayload(body: unknown) {
     name: name.trim(),
     scientificName: scientificName.trim(),
     description: description.trim(),
-    priceCents: Math.round(priceCents),
-    stockQty: Math.round(stockQty),
-    weightOz,
+    priceCents: hasVariants ? 0 : Math.round(priceCents as number),
+    stockQty: hasVariants ? 0 : Math.round(stockQty as number),
+    weightOz: hasVariants ? 0 : (weightOz as number),
     imageUrls: cleanImageUrls,
     active: active !== false,
     variants: cleanVariants,

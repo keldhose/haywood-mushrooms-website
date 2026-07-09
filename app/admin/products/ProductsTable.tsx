@@ -5,6 +5,23 @@ import type { Product } from "@/lib/products";
 import ProductModal from "./ProductModal";
 import ProductForm from "./ProductForm";
 
+/** Products with variants are priced/stocked per variant, not by the base fields. */
+function priceDisplay(product: Product): string {
+  if (product.variants && product.variants.length > 0) {
+    const minPrice = Math.min(...product.variants.map((v) => v.priceCents));
+    return `From $${(minPrice / 100).toFixed(2)}`;
+  }
+  return `$${(product.priceCents / 100).toFixed(2)}`;
+}
+
+function stockDisplay(product: Product): string {
+  if (product.variants && product.variants.length > 0) {
+    const total = product.variants.reduce((sum, v) => sum + v.stockQty, 0);
+    return `${total} (${product.variants.length} variants)`;
+  }
+  return `${product.stockQty}`;
+}
+
 export default function ProductsTable({ products }: { products: Product[] }) {
   const [editing, setEditing] = useState<Product | null>(null);
   const [creating, setCreating] = useState(false);
@@ -42,7 +59,7 @@ export default function ProductsTable({ products }: { products: Product[] }) {
             <div className="font-medium text-ink">{product.name}</div>
             <div className="mt-2 flex items-center justify-between text-[13px]">
               <span className="text-muted">
-                ${(product.priceCents / 100).toFixed(2)} · {product.stockQty} in stock
+                {priceDisplay(product)} · {stockDisplay(product)} in stock
               </span>
               <span className={`font-mono text-[10.5px] uppercase tracking-[0.1em] ${product.active ? "text-forest" : "text-muted"}`}>
                 {product.active ? "Active" : "Inactive"}
@@ -76,8 +93,8 @@ export default function ProductsTable({ products }: { products: Product[] }) {
                     {product.name}
                   </button>
                 </td>
-                <td className="px-5 py-4 text-muted">${(product.priceCents / 100).toFixed(2)}</td>
-                <td className="px-5 py-4 text-muted">{product.stockQty}</td>
+                <td className="px-5 py-4 text-muted">{priceDisplay(product)}</td>
+                <td className="px-5 py-4 text-muted">{stockDisplay(product)}</td>
                 <td className="px-5 py-4">
                   <span className={`font-mono text-[10.5px] uppercase tracking-[0.1em] ${product.active ? "text-forest" : "text-muted"}`}>
                     {product.active ? "Active" : "Inactive"}
