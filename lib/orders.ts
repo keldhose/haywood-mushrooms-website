@@ -1,7 +1,7 @@
 import "server-only";
 import { FieldValue, type Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
-import { sendOrderConfirmationEmail, sendShippedEmail, sendAdminOrderNotification } from "@/lib/email";
+import { sendOrderConfirmationEmail, sendShippedEmail, sendAdminOrderNotification, sendLowStockAlert } from "@/lib/email";
 
 export type OrderItem = {
   productId: string;
@@ -60,6 +60,17 @@ export type Order = {
 /** How long a pending order holds its stock reservation before it's eligible for automatic release. */
 const RESERVATION_TTL_MS = 30 * 60 * 1000;
 
+/** Stock at or below this triggers a one-time low-stock alert to the admin. */
+const LOW_STOCK_THRESHOLD = 5;
+
+export type LowStockCrossing = {
+  productId: string;
+  productName: string;
+  variantId?: string;
+  variantLabel?: string;
+  newStock: number;
+};
+
 export class InsufficientStockError extends Error {
   constructor(public readonly item: OrderItem, public readonly available: number) {
     super(`Only ${available} of "${item.name}" left in stock.`);
@@ -102,12 +113,19 @@ type StockVariant = { id: string; label: string; priceCents: number; weightOz: n
  * (sign +1, unvalidated). A missing product doc is silently skipped, same as
  * the historical decrement-on-payment behavior — it can't be reserved for or
  * released back to something that no longer exists.
+ *
+ * On a decrement (sign -1), also reports any line that just crossed at or
+ * below LOW_STOCK_THRESHOLD, so the caller can alert the admin exactly once
+ * per crossing rather than on every sale while stock stays low.
  */
 async function applyStockDelta(
   tx: FirebaseFirestore.Transaction,
   items: OrderItem[],
   sign: 1 | -1
-): Promise<{ ok: true } | { ok: false; item: OrderItem; available: number }> {
+): Promise<
+  | { ok: true; lowStockCrossings: LowStockCrossing[] }
+  | { ok: false; item: OrderItem; available: number }
+> {
   const productRefs = items.map((item) => adminDb.collection("products").doc(item.productId));
   const productSnaps = await Promise.all(productRefs.map((ref) => tx.get(ref)));
 
@@ -130,6 +148,8 @@ async function applyStockDelta(
     }
   }
 
+  const lowStockCrossings: LowStockCrossing[] = [];
+
   productSnaps.forEach((snap, i) => {
     if (!snap.exists) return;
     const item = items[i];
@@ -137,18 +157,32 @@ async function applyStockDelta(
     const variants = data.variants as StockVariant[] | undefined;
 
     if (item.variantId && Array.isArray(variants)) {
-      const updatedVariants = variants.map((v) =>
-        v.id === item.variantId ? { ...v, stockQty: Math.max(v.stockQty + sign * item.qty, 0) } : v
-      );
+      const updatedVariants = variants.map((v) => {
+        if (v.id !== item.variantId) return v;
+        const newStock = Math.max(v.stockQty + sign * item.qty, 0);
+        if (sign === -1 && v.stockQty > LOW_STOCK_THRESHOLD && newStock <= LOW_STOCK_THRESHOLD) {
+          lowStockCrossings.push({
+            productId: snap.id,
+            productName: data.name,
+            variantId: v.id,
+            variantLabel: v.label,
+            newStock,
+          });
+        }
+        return { ...v, stockQty: newStock };
+      });
       tx.update(snap.ref, { variants: updatedVariants });
     } else {
       const currentStock = (data.stockQty as number) ?? 0;
       const newStock = Math.max(currentStock + sign * item.qty, 0);
+      if (sign === -1 && currentStock > LOW_STOCK_THRESHOLD && newStock <= LOW_STOCK_THRESHOLD) {
+        lowStockCrossings.push({ productId: snap.id, productName: data.name, newStock });
+      }
       tx.update(snap.ref, { stockQty: newStock });
     }
   });
 
-  return { ok: true };
+  return { ok: true, lowStockCrossings };
 }
 
 /**
@@ -169,12 +203,17 @@ export async function createPendingOrder(input: {
   shippingRate: ShippingRate;
 }): Promise<string> {
   const orderRef = adminDb.collection("orders").doc();
+  let lowStockCrossings: LowStockCrossing[] = [];
 
   await adminDb.runTransaction(async (tx) => {
     const result = await applyStockDelta(tx, input.items, -1);
     if (!result.ok) {
       throw new InsufficientStockError(result.item, result.available);
     }
+    // Reassigned (not appended) on every attempt, so a transaction retry
+    // under contention can't cause a duplicate alert — only the crossings
+    // from the attempt that actually commits are used below.
+    lowStockCrossings = result.lowStockCrossings;
 
     tx.set(orderRef, {
       ...input,
@@ -184,6 +223,14 @@ export async function createPendingOrder(input: {
       updatedAt: FieldValue.serverTimestamp(),
     });
   });
+
+  if (lowStockCrossings.length > 0) {
+    try {
+      await sendLowStockAlert(lowStockCrossings);
+    } catch (err) {
+      console.error("Failed to send low-stock alert:", err);
+    }
+  }
 
   return orderRef.id;
 }

@@ -1,6 +1,6 @@
 import "server-only";
 import { Resend } from "resend";
-import type { Order } from "@/lib/orders";
+import type { Order, LowStockCrossing } from "@/lib/orders";
 
 const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL ?? "Haywood Mushrooms <onboarding@resend.dev>";
 const REPLY_TO = "info@haywoodmushrooms.com";
@@ -210,6 +210,53 @@ export async function sendAdminOrderNotification(order: Order): Promise<void> {
     }
   } catch (err) {
     console.error("Unexpected error sending admin order notification:", err);
+  }
+}
+
+export function buildLowStockAlertHtml(crossings: LowStockCrossing[]): string {
+  const rows = crossings
+    .map(
+      (c) => `
+    <tr>
+      <td style="padding:14px 20px;border-bottom:1px solid ${COLORS.line};">
+        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${c.productName}${c.variantLabel ? ` &mdash; ${c.variantLabel}` : ""}</div>
+      </td>
+      <td style="padding:14px 20px;border-bottom:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:16px;color:#a33;white-space:nowrap;">${c.newStock} left</td>
+    </tr>`
+    )
+    .join("");
+
+  const body = `
+    <div style="font-family:monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${COLORS.brass};">Low stock</div>
+    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">${crossings.length === 1 ? "An item is" : `${crossings.length} items are`} running low.</div>
+    <p style="font-size:15px;color:${COLORS.muted};margin-top:14px;line-height:1.6;">These just crossed your low-stock threshold — worth queuing a restock before they sell out.</p>
+    <table role="presentation" width="100%" style="border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:24px;">
+      ${rows}
+    </table>
+    ${brassButton("Manage products", `${BASE_URL}/admin/products`)}
+  `;
+  return emailShell("", body);
+}
+
+export async function sendLowStockAlert(crossings: LowStockCrossing[]): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY is not set; skipping low-stock alert");
+    return;
+  }
+
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: FROM_EMAIL,
+      to: REPLY_TO,
+      subject: crossings.length === 1 ? `Low stock — ${crossings[0].productName}` : `Low stock — ${crossings.length} items`,
+      html: buildLowStockAlertHtml(crossings),
+    });
+    if (error) {
+      console.error("Resend error sending low-stock alert:", error);
+    }
+  } catch (err) {
+    console.error("Unexpected error sending low-stock alert:", err);
   }
 }
 
