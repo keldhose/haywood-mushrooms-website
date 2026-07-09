@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth/session";
 import { getOrderById } from "@/lib/orders";
+import ReorderButton from "../../../components/shop/ReorderButton";
 
 export default async function OrderDetailPage({
   params,
@@ -26,7 +27,10 @@ export default async function OrderDetailPage({
           ← Your orders
         </Link>
 
-        <h1 className="mt-4 font-serif text-[32px] text-ink">Order #{order.id.slice(0, 8).toUpperCase()}</h1>
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <h1 className="font-serif text-[32px] text-ink">Order #{order.id.slice(0, 8).toUpperCase()}</h1>
+          <ReorderButton items={order.items} />
+        </div>
 
         {order.status === "paid" && (
           <div className="mt-4 rounded-[2px] border border-forest bg-paper px-4 py-3 text-[14px] text-forest">
