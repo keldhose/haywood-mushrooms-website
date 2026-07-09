@@ -39,43 +39,47 @@ export default function CartPage() {
           {items.map((item) => (
             <div
               key={item.productId}
-              className="flex items-center gap-5 rounded-[3px] border border-line bg-paper p-5"
+              className="flex flex-col gap-4 rounded-[3px] border border-line bg-paper p-5 sm:flex-row sm:items-center sm:gap-5"
             >
-              <div className="relative h-20 w-20 flex-none overflow-hidden rounded-[2px] bg-[#1a1512]">
-                <Image src={item.imageUrl} alt={item.name} fill sizes="80px" className="object-cover" />
-              </div>
+              <div className="flex items-center gap-4 sm:min-w-0 sm:flex-1">
+                <div className="relative h-20 w-20 flex-none overflow-hidden rounded-[2px] bg-[#1a1512]">
+                  <Image src={item.imageUrl} alt={item.name} fill sizes="80px" className="object-cover" />
+                </div>
 
-              <div className="flex-1">
-                <div className="text-[15px] font-medium text-ink">{item.name}</div>
-                <div className="mt-1 font-mono text-[13px] text-muted">
-                  ${(item.priceCents / 100).toFixed(2)} each
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-medium text-ink">{item.name}</div>
+                  <div className="mt-1 font-mono text-[13px] text-muted">
+                    ${(item.priceCents / 100).toFixed(2)} each
+                  </div>
                 </div>
               </div>
 
-              <select
-                value={item.qty}
-                onChange={(e) => updateQty(item.productId, Number(e.target.value))}
-                className="rounded-[2px] border border-line bg-paper p-2.5 text-[15px] outline-none focus:border-forest"
-              >
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between gap-4 sm:justify-end sm:gap-5">
+                <select
+                  value={item.qty}
+                  onChange={(e) => updateQty(item.productId, Number(e.target.value))}
+                  className="rounded-[2px] border border-line bg-paper p-2.5 text-[15px] outline-none focus:border-forest"
+                >
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
 
-              <div className="w-20 text-right font-serif text-[18px] text-ink">
-                ${((item.priceCents * item.qty) / 100).toFixed(2)}
+                <div className="w-20 text-right font-serif text-[18px] text-ink">
+                  ${((item.priceCents * item.qty) / 100).toFixed(2)}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => removeItem(item.productId)}
+                  aria-label={`Remove ${item.name}`}
+                  className="font-mono text-[12px] text-muted hover:text-red-700"
+                >
+                  Remove
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => removeItem(item.productId)}
-                aria-label={`Remove ${item.name}`}
-                className="font-mono text-[12px] text-muted hover:text-red-700"
-              >
-                Remove
-              </button>
             </div>
           ))}
         </div>
