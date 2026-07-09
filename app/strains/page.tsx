@@ -9,25 +9,25 @@ export const metadata = {
 
 const strains = [
   {
+    name: "Blue Oyster",
+    scientific: "Pleurotus ostreatus var.",
+    image: "/blue-oyster-cluster.webp",
+    desc: "A cool-weather oyster with steel-blue young caps that fade to silver-grey. Prized for firm texture and clean flavor, and a strong performer through the colder months of the growing calendar.",
+    specs: { colonization: "Fast", temp: "50–70°F", yield: "High", difficulty: "Easy" },
+  },
+  {
     name: "Pink Oyster",
     scientific: "Pleurotus djamor",
-    image: "/pink-oyster.png",
+    image: "/pink-oyster-cluster.jpeg",
     desc: "A tropical oyster that fruits in vivid coral clusters and moves fast — often the quickest way from inoculation to harvest. Loves warmth, rewards humidity, and makes an unmistakable market display.",
     specs: { colonization: "Ultra-fast", temp: "70–85°F", yield: "High", difficulty: "Easy" },
   },
   {
     name: "Grey Oyster",
     scientific: "Pleurotus ostreatus",
-    image: "/grey-oyster-harvest.jpg",
+    image: "/oyster-grow-bag.jpg",
     desc: "The commercial standard for a reason — aggressive colonization, forgiving across substrates, and thick, meaty caps. A dependable base for any production room and the easiest strain to keep contamination-free.",
     specs: { colonization: "Aggressive", temp: "55–75°F", yield: "Very high", difficulty: "Easy" },
-  },
-  {
-    name: "Blue Oyster",
-    scientific: "Pleurotus ostreatus var.",
-    image: "/oyster-grow-bag.jpg",
-    desc: "A cool-weather oyster with steel-blue young caps that fade to silver-grey. Prized for firm texture and clean flavor, and a strong performer through the colder months of the growing calendar.",
-    specs: { colonization: "Fast", temp: "50–70°F", yield: "High", difficulty: "Easy" },
   },
   {
     name: "Lion's Mane",
