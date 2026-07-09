@@ -27,20 +27,20 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.haywoodmushrooms.com"),
-  title: "Haywood Mushrooms | Premium Mushroom Spawn & Fungal Cultures",
+  title: "Haywood Mushrooms — Spawn Laboratory",
   description:
-    "Haywood Mushrooms develops premium mushroom spawn and fungal cultures using scientific plant pathology methods in Cary, North Carolina.",
+    "Science-led mushroom spawn, grown from science not guesswork. Order premium grain spawn directly from our lab in North Carolina.",
   openGraph: {
-    title: "Haywood Mushrooms",
+    title: "Haywood Mushrooms — Spawn Laboratory",
     description:
-      "Premium mushroom spawn and fungal cultures developed using plant pathology expertise.",
+      "Science-led mushroom spawn, grown from science not guesswork. Order premium grain spawn directly from our lab in North Carolina.",
     url: "https://www.haywoodmushrooms.com",
     siteName: "Haywood Mushrooms",
     images: [
       {
         url: "/pink-oyster.png",
-        width: 1200,
-        height: 630,
+        width: 1600,
+        height: 1200,
       },
     ],
     type: "website",
