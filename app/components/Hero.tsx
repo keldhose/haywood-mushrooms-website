@@ -70,10 +70,10 @@ export default async function Hero() {
         </p>
         <div className="mt-9 flex flex-wrap gap-3.5">
           <Link
-            href="/#request"
+            href="/shop"
             className="inline-flex items-center gap-[9px] rounded-[2px] bg-brass px-[22px] py-[13px] text-[14.5px] font-semibold text-forest-deep transition hover:brightness-[1.06]"
           >
-            Request spawn <span className="font-mono">→</span>
+            Shop now <span className="font-mono">→</span>
           </Link>
           <Link
             href="/#science"

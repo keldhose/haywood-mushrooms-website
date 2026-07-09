@@ -71,10 +71,10 @@ export default function Navbar() {
             )}
           </Link>
           <Link
-            href="/#request"
+            href="/shop"
             className="inline-flex items-center gap-[9px] rounded-[2px] border border-brass bg-brass px-[22px] py-[13px] text-[14.5px] font-semibold text-forest-deep transition hover:brightness-[1.06]"
           >
-            Request spawn <span className="font-mono">→</span>
+            Shop now <span className="font-mono">→</span>
           </Link>
         </div>
 
@@ -122,11 +122,11 @@ export default function Navbar() {
             Cart{totalQty > 0 ? ` (${totalQty})` : ""}
           </Link>
           <Link
-            href="/#request"
+            href="/shop"
             onClick={() => setOpen(false)}
             className="border-b border-line py-[10px] text-[17px] font-medium text-ink"
           >
-            Request spawn →
+            Shop now →
           </Link>
         </div>
       )}
