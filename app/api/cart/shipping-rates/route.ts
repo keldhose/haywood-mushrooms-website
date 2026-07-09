@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { shippo, SHIP_FROM_ADDRESS, DEFAULT_PARCEL } from "@/lib/shippo";
-import { getProductsByIds } from "@/lib/products";
+import { getProductsByIds, getVariant } from "@/lib/products";
 
-type RequestItem = { productId: string; qty: number };
+type RequestItem = { productId: string; variantId?: string; qty: number };
 type RequestAddress = {
   name: string;
   street1: string;
@@ -45,13 +45,14 @@ export async function POST(request: Request) {
     if (!product) {
       return NextResponse.json({ error: "One of the items in your cart is no longer available." }, { status: 400 });
     }
-    if (item.qty > product.stockQty) {
+    const variant = getVariant(product, item.variantId);
+    if (item.qty > variant.stockQty) {
       return NextResponse.json(
-        { error: `Only ${product.stockQty} of "${product.name}" left in stock.` },
+        { error: `Only ${variant.stockQty} of "${product.name}" left in stock.` },
         { status: 400 }
       );
     }
-    totalWeightOz += product.weightOz * item.qty;
+    totalWeightOz += variant.weightOz * item.qty;
   }
 
   const totalWeightLb = Math.max(totalWeightOz / 16, 0.1).toFixed(2);

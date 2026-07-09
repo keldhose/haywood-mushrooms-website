@@ -63,19 +63,12 @@ export default async function ShopPage() {
                     <p className="mt-4 flex-1 text-[14.5px] leading-[1.5] text-muted">{product.description}</p>
 
                     <div className="mt-5 font-serif text-[24px] text-ink">
-                      ${(product.priceCents / 100).toFixed(2)}
+                      {product.variants && product.variants.length > 0
+                        ? `From $${(Math.min(...product.variants.map((v) => v.priceCents)) / 100).toFixed(2)}`
+                        : `$${(product.priceCents / 100).toFixed(2)}`}
                     </div>
 
-                    <div className="mt-4">
-                      <AddToCart
-                        productId={product.id}
-                        name={product.name}
-                        priceCents={product.priceCents}
-                        imageUrl={product.imageUrl}
-                        weightOz={product.weightOz}
-                        stockQty={product.stockQty}
-                      />
-                    </div>
+                    <AddToCart product={product} compact />
                   </div>
                 </div>
               ))}

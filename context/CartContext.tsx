@@ -10,6 +10,9 @@ import {
 
 export type CartItem = {
   productId: string;
+  /** Present when the product line is a specific variant rather than the base product. */
+  variantId?: string;
+  variantLabel?: string;
   name: string;
   priceCents: number;
   imageUrl: string;
@@ -17,11 +20,17 @@ export type CartItem = {
   qty: number;
 };
 
+type CartLineKey = { productId: string; variantId?: string };
+
+function sameLine(a: CartLineKey, b: CartLineKey): boolean {
+  return a.productId === b.productId && (a.variantId ?? "") === (b.variantId ?? "");
+}
+
 type CartContextValue = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "qty">, qty?: number) => void;
-  updateQty: (productId: string, qty: number) => void;
-  removeItem: (productId: string) => void;
+  updateQty: (productId: string, variantId: string | undefined, qty: number) => void;
+  removeItem: (productId: string, variantId?: string) => void;
   clear: () => void;
   subtotalCents: number;
   totalQty: number;
@@ -54,26 +63,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function addItem(item: Omit<CartItem, "qty">, qty = 1) {
     setItems((prev) => {
-      const existing = prev.find((i) => i.productId === item.productId);
+      const existing = prev.find((i) => sameLine(i, item));
       if (existing) {
-        return prev.map((i) =>
-          i.productId === item.productId ? { ...i, qty: i.qty + qty } : i
-        );
+        return prev.map((i) => (sameLine(i, item) ? { ...i, qty: i.qty + qty } : i));
       }
       return [...prev, { ...item, qty }];
     });
   }
 
-  function updateQty(productId: string, qty: number) {
+  function updateQty(productId: string, variantId: string | undefined, qty: number) {
     if (qty <= 0) {
-      removeItem(productId);
+      removeItem(productId, variantId);
       return;
     }
-    setItems((prev) => prev.map((i) => (i.productId === productId ? { ...i, qty } : i)));
+    setItems((prev) => prev.map((i) => (sameLine(i, { productId, variantId }) ? { ...i, qty } : i)));
   }
 
-  function removeItem(productId: string) {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
+  function removeItem(productId: string, variantId?: string) {
+    setItems((prev) => prev.filter((i) => !sameLine(i, { productId, variantId })));
   }
 
   function clear() {

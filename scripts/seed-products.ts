@@ -8,6 +8,14 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
+type SeedVariant = {
+  id: string;
+  label: string;
+  priceCents: number;
+  weightOz: number;
+  stockQty: number;
+};
+
 type SeedProduct = {
   slug: string;
   name: string;
@@ -18,6 +26,7 @@ type SeedProduct = {
   weightOz: number;
   imageUrls: string[];
   active: boolean;
+  variants?: SeedVariant[];
 };
 
 const products: SeedProduct[] = [
@@ -56,6 +65,25 @@ const products: SeedProduct[] = [
     weightOz: 48,
     imageUrls: ["/oyster-grow-bag.jpg"],
     active: true,
+  },
+  {
+    slug: "grey-oyster-grain-spawn",
+    name: "Premium Grey Oyster Mushroom Grain Spawn (Fully Colonized)",
+    scientificName: "Pleurotus ostreatus",
+    description:
+      "Fully colonized grain spawn, made to order. Aggressive, forgiving, and the dependable base for any production room. Available in three sizes.",
+    // Base fields mirror the 5 lb variant — only used as a display fallback
+    // if a caller ever reads the product without going through a variant.
+    priceCents: 2650,
+    stockQty: 18,
+    weightOz: 80,
+    imageUrls: ["/grey-oyster-harvest.jpg"],
+    active: true,
+    variants: [
+      { id: "1lb", label: "1 lb", priceCents: 1200, weightOz: 16, stockQty: 22 },
+      { id: "5lb", label: "5 lb", priceCents: 2650, weightOz: 80, stockQty: 18 },
+      { id: "10lb", label: "10 lb", priceCents: 4400, weightOz: 160, stockQty: 9 },
+    ],
   },
 ];
 

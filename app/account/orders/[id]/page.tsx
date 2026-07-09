@@ -48,9 +48,10 @@ export default async function OrderDetailPage({
           <div className="font-serif text-[20px] text-ink">Items</div>
           <div className="mt-4 flex flex-col gap-2">
             {order.items.map((item) => (
-              <div key={item.productId} className="flex justify-between text-[14px] text-muted">
+              <div key={`${item.productId}-${item.variantId ?? ""}`} className="flex justify-between text-[14px] text-muted">
                 <span>
-                  {item.name} × {item.qty}
+                  {item.name}
+                  {item.variantLabel ? ` — ${item.variantLabel}` : ""} × {item.qty}
                 </span>
                 <span>${((item.priceCents * item.qty) / 100).toFixed(2)}</span>
               </div>

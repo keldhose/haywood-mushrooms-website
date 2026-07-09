@@ -1,6 +1,15 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase/admin";
 
+/** One purchasable option on a product (e.g. a 1/5/10 lb size, or grain/agar/LC form). */
+export type ProductVariant = {
+  id: string;
+  label: string;
+  priceCents: number;
+  weightOz: number;
+  stockQty: number;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -14,6 +23,8 @@ export type Product = {
   /** First image — convenient for contexts that only show one (cart, catalog cards). */
   imageUrl: string;
   active: boolean;
+  /** Optional purchasable options. When absent, the product itself is the single implicit variant. */
+  variants?: ProductVariant[];
 };
 
 function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
@@ -24,6 +35,17 @@ function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
     : data.imageUrl
     ? [data.imageUrl]
     : [];
+
+  const variants: ProductVariant[] | undefined =
+    Array.isArray(data.variants) && data.variants.length > 0
+      ? data.variants.map((v: FirebaseFirestore.DocumentData) => ({
+          id: v.id,
+          label: v.label,
+          priceCents: v.priceCents,
+          weightOz: v.weightOz,
+          stockQty: v.stockQty,
+        }))
+      : undefined;
 
   return {
     id,
@@ -36,7 +58,26 @@ function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
     imageUrls,
     imageUrl: imageUrls[0] ?? "",
     active: data.active !== false,
+    variants,
   };
+}
+
+/**
+ * Resolves the purchasable price/weight/stock for a product, given an
+ * optional variant id. Products without variants behave as a single
+ * implicit variant built from their own base fields — this is the one
+ * place that distinction should matter, so cart/checkout/stock code can
+ * stay variant-agnostic and just call this.
+ */
+export function getVariant(
+  product: Product,
+  variantId?: string
+): { id?: string; label?: string; priceCents: number; weightOz: number; stockQty: number } {
+  if (product.variants && product.variants.length > 0) {
+    const found = variantId ? product.variants.find((v) => v.id === variantId) : undefined;
+    return found ?? product.variants[0];
+  }
+  return { priceCents: product.priceCents, weightOz: product.weightOz, stockQty: product.stockQty };
 }
 
 export async function getAllProducts(): Promise<Product[]> {

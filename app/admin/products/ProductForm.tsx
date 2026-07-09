@@ -4,6 +4,14 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/products";
 
+type VariantDraft = {
+  id: string;
+  label: string;
+  price: string;
+  stockQty: string;
+  weightOz: string;
+};
+
 export default function ProductForm({
   product,
   onSaved,
@@ -25,6 +33,15 @@ export default function ProductForm({
   const [weightOz, setWeightOz] = useState(product?.weightOz.toString() ?? "");
   const [imageUrls, setImageUrls] = useState<string[]>(product?.imageUrls ?? []);
   const [active, setActive] = useState(product?.active ?? true);
+  const [variants, setVariants] = useState<VariantDraft[]>(
+    (product?.variants ?? []).map((v) => ({
+      id: v.id,
+      label: v.label,
+      price: (v.priceCents / 100).toFixed(2),
+      stockQty: v.stockQty.toString(),
+      weightOz: v.weightOz.toString(),
+    }))
+  );
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -66,6 +83,21 @@ export default function ProductForm({
     }
   }
 
+  function addVariant() {
+    setVariants((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), label: "", price: "", stockQty: "0", weightOz: "" },
+    ]);
+  }
+
+  function updateVariant(id: string, patch: Partial<VariantDraft>) {
+    setVariants((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)));
+  }
+
+  function removeVariant(id: string) {
+    setVariants((prev) => prev.filter((v) => v.id !== id));
+  }
+
   function handleSetCover(url: string) {
     setImageUrls((prev) => [url, ...prev.filter((u) => u !== url)]);
   }
@@ -85,6 +117,16 @@ export default function ProductForm({
     setSaving(true);
     setError("");
 
+    const cleanVariants = variants
+      .filter((v) => v.label.trim())
+      .map((v) => ({
+        id: v.id,
+        label: v.label.trim(),
+        priceCents: Math.round(parseFloat(v.price) * 100),
+        stockQty: parseInt(v.stockQty, 10) || 0,
+        weightOz: parseFloat(v.weightOz) || 0,
+      }));
+
     const payload = {
       name,
       scientificName,
@@ -94,6 +136,7 @@ export default function ProductForm({
       weightOz: parseFloat(weightOz),
       imageUrls,
       active,
+      variants: cleanVariants,
     };
 
     try {
@@ -277,7 +320,86 @@ export default function ProductForm({
         )}
       </div>
 
-      <label className="mt-4 flex items-center gap-2.5 text-[14px] text-ink">
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <label className="block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
+            Variants <span className="normal-case text-muted/70">(optional — e.g. 1 lb / 5 lb / 10 lb)</span>
+          </label>
+          <button
+            type="button"
+            onClick={addVariant}
+            className="font-mono text-[11px] uppercase tracking-[0.1em] text-forest hover:text-brass"
+          >
+            + Add variant
+          </button>
+        </div>
+
+        {variants.length > 0 && (
+          <div className="mt-3 flex flex-col gap-3">
+            {variants.map((v) => (
+              <div key={v.id} className="grid grid-cols-[1.4fr_0.9fr_0.8fr_0.8fr_auto] items-end gap-2 rounded-[2px] border border-line bg-paper p-3">
+                <div>
+                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Label</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="5 lb"
+                    value={v.label}
+                    onChange={(e) => updateVariant(v.id, { label: e.target.value })}
+                    className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Price ($)</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={v.price}
+                    onChange={(e) => updateVariant(v.id, { price: e.target.value })}
+                    className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Stock</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="1"
+                    value={v.stockQty}
+                    onChange={(e) => updateVariant(v.id, { stockQty: e.target.value })}
+                    className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Weight (oz)</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.1"
+                    value={v.weightOz}
+                    onChange={(e) => updateVariant(v.id, { weightOz: e.target.value })}
+                    className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeVariant(v.id)}
+                  aria-label={`Remove variant ${v.label || ""}`}
+                  className="mb-0.5 h-fit font-mono text-[11px] text-muted hover:text-red-700"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <label className="mt-6 flex items-center gap-2.5 text-[14px] text-ink">
         <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
         Active (visible in the shop)
       </label>

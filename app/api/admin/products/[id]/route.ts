@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { FieldValue } from "firebase-admin/firestore";
 import { getSessionUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { validateProductPayload } from "../route";
@@ -23,7 +24,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Missing or invalid fields." }, { status: 400 });
   }
 
-  await adminDb.collection("products").doc(id).update(product);
+  // An empty variants array means "no variants" — clear the field rather
+  // than writing an empty array, so getAllProducts' back-compat check
+  // (`variants?.length > 0`) sees a genuinely non-variant product.
+  const { variants, ...rest } = product;
+  const updateData = variants.length > 0 ? { ...rest, variants } : { ...rest, variants: FieldValue.delete() };
+  await adminDb.collection("products").doc(id).update(updateData);
 
   return NextResponse.json({ ok: true });
 }

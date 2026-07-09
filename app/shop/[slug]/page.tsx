@@ -53,23 +53,8 @@ export default async function ProductPage({
 
             <p className="mt-6 max-w-[34em] text-[17px] leading-[1.6] text-muted">{product.description}</p>
 
-            <div className="mt-7 font-serif text-[32px] text-ink">
-              ${(product.priceCents / 100).toFixed(2)}
-            </div>
-
-            <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
-              {(product.weightOz / 16).toFixed(1)} lb · {product.stockQty > 0 ? `${product.stockQty} in stock` : "Out of stock"}
-            </div>
-
-            <div className="mt-7 max-w-[360px]">
-              <AddToCart
-                productId={product.id}
-                name={product.name}
-                priceCents={product.priceCents}
-                imageUrl={product.imageUrl}
-                weightOz={product.weightOz}
-                stockQty={product.stockQty}
-              />
+            <div className="mt-7">
+              <AddToCart product={product} />
             </div>
           </div>
         </div>

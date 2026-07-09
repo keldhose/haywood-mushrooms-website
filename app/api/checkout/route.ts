@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
-import { getProductsByIds } from "@/lib/products";
+import { getProductsByIds, getVariant } from "@/lib/products";
 import { shippo } from "@/lib/shippo";
 import { stripe } from "@/lib/stripe";
 import { createPendingOrder, type OrderItem, type ShippingAddress } from "@/lib/orders";
 
-type RequestItem = { productId: string; qty: number };
+type RequestItem = { productId: string; variantId?: string; qty: number };
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -46,16 +46,19 @@ export async function POST(request: Request) {
     if (!product) {
       return NextResponse.json({ error: "One of the items in your cart is no longer available." }, { status: 400 });
     }
-    if (item.qty > product.stockQty) {
+    const variant = getVariant(product, item.variantId);
+    if (item.qty > variant.stockQty) {
       return NextResponse.json(
-        { error: `Only ${product.stockQty} of "${product.name}" left in stock.` },
+        { error: `Only ${variant.stockQty} of "${product.name}" left in stock.` },
         { status: 400 }
       );
     }
     orderItems.push({
       productId: product.id,
+      variantId: variant.id || undefined,
+      variantLabel: variant.label || undefined,
       name: product.name,
-      priceCents: product.priceCents,
+      priceCents: variant.priceCents,
       qty: item.qty,
     });
   }
@@ -101,7 +104,7 @@ export async function POST(request: Request) {
         ...orderItems.map((item) => ({
           price_data: {
             currency: "usd",
-            product_data: { name: item.name },
+            product_data: { name: item.variantLabel ? `${item.name} — ${item.variantLabel}` : item.name },
             unit_amount: item.priceCents,
           },
           quantity: item.qty,

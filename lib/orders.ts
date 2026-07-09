@@ -5,6 +5,8 @@ import { sendOrderConfirmationEmail, sendShippedEmail } from "@/lib/email";
 
 export type OrderItem = {
   productId: string;
+  variantId?: string;
+  variantLabel?: string;
   name: string;
   priceCents: number;
   qty: number;
@@ -113,9 +115,22 @@ export async function markOrderPaid(
 
     productSnaps.forEach((snap, i) => {
       if (!snap.exists) return;
-      const currentStock = (snap.data()!.stockQty as number) ?? 0;
-      const newStock = Math.max(currentStock - items[i].qty, 0);
-      tx.update(snap.ref, { stockQty: newStock });
+      const item = items[i];
+      const data = snap.data()!;
+      const variants = data.variants as
+        | Array<{ id: string; label: string; priceCents: number; weightOz: number; stockQty: number }>
+        | undefined;
+
+      if (item.variantId && Array.isArray(variants)) {
+        const updatedVariants = variants.map((v) =>
+          v.id === item.variantId ? { ...v, stockQty: Math.max(v.stockQty - item.qty, 0) } : v
+        );
+        tx.update(snap.ref, { variants: updatedVariants });
+      } else {
+        const currentStock = (data.stockQty as number) ?? 0;
+        const newStock = Math.max(currentStock - item.qty, 0);
+        tx.update(snap.ref, { stockQty: newStock });
+      }
     });
 
     tx.update(orderRef, {

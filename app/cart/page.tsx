@@ -38,7 +38,7 @@ export default function CartPage() {
         <div className="mt-8 flex flex-col gap-4">
           {items.map((item) => (
             <div
-              key={item.productId}
+              key={`${item.productId}-${item.variantId ?? ""}`}
               className="flex flex-col gap-4 rounded-[3px] border border-line bg-paper p-5 sm:flex-row sm:items-center sm:gap-5"
             >
               <div className="flex items-center gap-4 sm:min-w-0 sm:flex-1">
@@ -47,7 +47,10 @@ export default function CartPage() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="text-[15px] font-medium text-ink">{item.name}</div>
+                  <div className="text-[15px] font-medium text-ink">
+                    {item.name}
+                    {item.variantLabel && <span className="text-muted"> — {item.variantLabel}</span>}
+                  </div>
                   <div className="mt-1 font-mono text-[13px] text-muted">
                     ${(item.priceCents / 100).toFixed(2)} each
                   </div>
@@ -57,7 +60,7 @@ export default function CartPage() {
               <div className="flex items-center justify-between gap-4 sm:justify-end sm:gap-5">
                 <select
                   value={item.qty}
-                  onChange={(e) => updateQty(item.productId, Number(e.target.value))}
+                  onChange={(e) => updateQty(item.productId, item.variantId, Number(e.target.value))}
                   className="rounded-[2px] border border-line bg-paper p-2.5 text-[15px] outline-none focus:border-forest"
                 >
                   {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
@@ -73,7 +76,7 @@ export default function CartPage() {
 
                 <button
                   type="button"
-                  onClick={() => removeItem(item.productId)}
+                  onClick={() => removeItem(item.productId, item.variantId)}
                   aria-label={`Remove ${item.name}`}
                   className="font-mono text-[12px] text-muted hover:text-red-700"
                 >

@@ -47,7 +47,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({ productId: i.productId, qty: i.qty })),
+          items: items.map((i) => ({ productId: i.productId, variantId: i.variantId, qty: i.qty })),
           address: { name, street1, street2, city, state, zip },
         }),
       });
@@ -75,7 +75,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({ productId: i.productId, qty: i.qty })),
+          items: items.map((i) => ({ productId: i.productId, variantId: i.variantId, qty: i.qty })),
           address: { name, street1, street2, city, state, zip },
           rateId: selectedRateId,
         }),
@@ -231,9 +231,10 @@ export default function CheckoutPage() {
             <div className="font-serif text-[20px] text-ink">Order summary</div>
             <div className="mt-4 flex flex-col gap-2">
               {items.map((item) => (
-                <div key={item.productId} className="flex justify-between text-[14px] text-muted">
+                <div key={`${item.productId}-${item.variantId ?? ""}`} className="flex justify-between text-[14px] text-muted">
                   <span>
-                    {item.name} × {item.qty}
+                    {item.name}
+                    {item.variantLabel ? ` — ${item.variantLabel}` : ""} × {item.qty}
                   </span>
                   <span>${((item.priceCents * item.qty) / 100).toFixed(2)}</span>
                 </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import type { ProductVariant } from "@/lib/products";
 
 function slugify(name: string): string {
   return name
@@ -9,15 +10,41 @@ function slugify(name: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+function validateVariants(input: unknown): ProductVariant[] | null {
+  if (!Array.isArray(input)) return [];
+
+  const clean: ProductVariant[] = [];
+  for (const raw of input) {
+    const v = (raw ?? {}) as Record<string, unknown>;
+    if (
+      typeof v.id !== "string" || !v.id.trim() ||
+      typeof v.label !== "string" || !v.label.trim() ||
+      typeof v.priceCents !== "number" || !Number.isFinite(v.priceCents) || v.priceCents < 0 ||
+      typeof v.stockQty !== "number" || !Number.isFinite(v.stockQty) || v.stockQty < 0 ||
+      typeof v.weightOz !== "number" || !Number.isFinite(v.weightOz) || v.weightOz <= 0
+    ) {
+      return null;
+    }
+    clean.push({
+      id: v.id.trim(),
+      label: v.label.trim(),
+      priceCents: Math.round(v.priceCents),
+      stockQty: Math.round(v.stockQty),
+      weightOz: v.weightOz,
+    });
+  }
+  return clean;
+}
+
 export function validateProductPayload(body: unknown) {
-  const { name, scientificName, description, priceCents, stockQty, weightOz, imageUrls, active } = (body ?? {}) as Record<
-    string,
-    unknown
-  >;
+  const { name, scientificName, description, priceCents, stockQty, weightOz, imageUrls, active, variants } =
+    (body ?? {}) as Record<string, unknown>;
 
   const cleanImageUrls = Array.isArray(imageUrls)
     ? imageUrls.filter((u): u is string => typeof u === "string" && u.trim().length > 0).map((u) => u.trim())
     : [];
+
+  const cleanVariants = validateVariants(variants);
 
   if (
     typeof name !== "string" || !name.trim() ||
@@ -26,7 +53,8 @@ export function validateProductPayload(body: unknown) {
     cleanImageUrls.length === 0 ||
     typeof priceCents !== "number" || !Number.isFinite(priceCents) || priceCents < 0 ||
     typeof stockQty !== "number" || !Number.isFinite(stockQty) || stockQty < 0 ||
-    typeof weightOz !== "number" || !Number.isFinite(weightOz) || weightOz <= 0
+    typeof weightOz !== "number" || !Number.isFinite(weightOz) || weightOz <= 0 ||
+    cleanVariants === null
   ) {
     return null;
   }
@@ -40,6 +68,7 @@ export function validateProductPayload(body: unknown) {
     weightOz,
     imageUrls: cleanImageUrls,
     active: active !== false,
+    variants: cleanVariants,
   };
 }
 
@@ -69,7 +98,9 @@ export async function POST(request: Request) {
     slug = `${baseSlug}-${suffix}`;
   }
 
-  await adminDb.collection("products").doc(slug).set(product);
+  const { variants, ...rest } = product;
+  const docData = variants.length > 0 ? { ...rest, variants } : rest;
+  await adminDb.collection("products").doc(slug).set(docData);
 
   return NextResponse.json({ id: slug });
 }

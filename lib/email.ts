@@ -76,7 +76,7 @@ function orderItemsTable(order: Order): string {
       (item) => `
     <tr>
       <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};">
-        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${item.name}</div>
+        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${item.name}${item.variantLabel ? ` &mdash; ${item.variantLabel}` : ""}</div>
         <div style="font-family:monospace;font-size:11px;color:${COLORS.muted};margin-top:2px;">Qty ${item.qty}</div>
       </td>
       <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:16px;color:${COLORS.ink};white-space:nowrap;">$${((item.priceCents * item.qty) / 100).toFixed(2)}</td>
