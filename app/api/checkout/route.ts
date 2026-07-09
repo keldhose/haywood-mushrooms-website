@@ -11,6 +11,7 @@ import {
   type OrderItem,
   type ShippingAddress,
 } from "@/lib/orders";
+import { saveAddress } from "@/lib/users";
 
 type RequestItem = { productId: string; variantId?: string; qty: number };
 
@@ -130,6 +131,13 @@ export async function POST(request: Request) {
     }
     console.error("Failed to create pending order:", err);
     return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 500 });
+  }
+
+  // Remember this address for next time — best-effort, never blocks checkout.
+  try {
+    await saveAddress(user.uid, address);
+  } catch (err) {
+    console.error(`Failed to save address for user ${user.uid}:`, err);
   }
 
   const origin = new URL(request.url).origin;
