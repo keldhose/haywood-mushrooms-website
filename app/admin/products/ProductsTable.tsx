@@ -29,7 +29,32 @@ export default function ProductsTable({ products }: { products: Product[] }) {
         </button>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-[3px] border border-line">
+      {/* Mobile: stacked cards. A fixed-column table can't reflow, so on a
+          narrow screen the name column gets squeezed and wraps word-by-word. */}
+      <div className="mt-8 flex flex-col gap-3 sm:hidden">
+        {products.map((product) => (
+          <button
+            key={product.id}
+            type="button"
+            onClick={() => setEditing(product)}
+            className="rounded-[3px] border border-line bg-paper p-4 text-left hover:border-forest"
+          >
+            <div className="font-medium text-ink">{product.name}</div>
+            <div className="mt-2 flex items-center justify-between text-[13px]">
+              <span className="text-muted">
+                ${(product.priceCents / 100).toFixed(2)} · {product.stockQty} in stock
+              </span>
+              <span className={`font-mono text-[10.5px] uppercase tracking-[0.1em] ${product.active ? "text-forest" : "text-muted"}`}>
+                {product.active ? "Active" : "Inactive"}
+              </span>
+            </div>
+          </button>
+        ))}
+        {products.length === 0 && <p className="py-8 text-center text-muted">No products yet.</p>}
+      </div>
+
+      {/* Desktop / tablet: full table. */}
+      <div className="mt-8 hidden overflow-hidden rounded-[3px] border border-line sm:block">
         <table className="w-full border-collapse text-left text-[14px]">
           <thead>
             <tr className="border-b border-line bg-paper font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">

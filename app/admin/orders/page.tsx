@@ -20,7 +20,33 @@ export default async function AdminOrdersPage() {
       <div className="mx-auto max-w-[1200px]">
         <h1 className="font-serif text-[32px] text-ink">Orders</h1>
 
-        <div className="mt-8 overflow-hidden rounded-[3px] border border-line">
+        {/* Mobile: stacked cards — a fixed-column table can't reflow on a
+            narrow screen (email/order-id columns squeeze each other out). */}
+        <div className="mt-8 flex flex-col gap-3 sm:hidden">
+          {orders.map((order) => (
+            <Link
+              key={order.id}
+              href={`/admin/orders/${order.id}`}
+              className="block rounded-[3px] border border-line bg-paper p-4 hover:border-forest"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-ink">#{order.id.slice(0, 8).toUpperCase()}</span>
+                <span className={`font-mono text-[10.5px] uppercase tracking-[0.1em] ${statusColor[order.status] ?? ""}`}>
+                  {order.status}
+                </span>
+              </div>
+              <div className="mt-1.5 truncate text-[13px] text-muted">{order.userEmail}</div>
+              <div className="mt-2 flex items-center justify-between text-[13px] text-muted">
+                <span>{order.createdAt ? order.createdAt.toLocaleDateString() : ""}</span>
+                <span className="text-ink">${(order.totalCents / 100).toFixed(2)}</span>
+              </div>
+            </Link>
+          ))}
+          {orders.length === 0 && <p className="py-8 text-center text-muted">No orders yet.</p>}
+        </div>
+
+        {/* Desktop / tablet: full table. */}
+        <div className="mt-8 hidden overflow-hidden rounded-[3px] border border-line sm:block">
           <table className="w-full border-collapse text-left text-[14px]">
             <thead>
               <tr className="border-b border-line bg-paper font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
