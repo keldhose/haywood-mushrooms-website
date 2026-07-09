@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 // Type-only: importing anything runtime from "@/lib/products" here would
 // pull the server-only firebase-admin module graph into the client bundle.
@@ -186,11 +187,20 @@ export default function AddToCart({
 
       <div className={compact ? "mt-4" : "mt-7 max-w-[360px]"}>
         {outOfStock ? (
-          <BackInStockForm
-            productId={product.id}
-            variantId={hasVariants ? selected.id : undefined}
-            itemLabel={hasVariants && selected.label ? `${product.name} — ${selected.label}` : product.name}
-          />
+          compact ? (
+            <Link
+              href={`/shop/${product.id}`}
+              className="inline-flex font-mono text-[12px] uppercase tracking-[0.1em] text-forest hover:text-brass"
+            >
+              Notify me →
+            </Link>
+          ) : (
+            <BackInStockForm
+              productId={product.id}
+              variantId={hasVariants ? selected.id : undefined}
+              itemLabel={hasVariants && selected.label ? `${product.name} — ${selected.label}` : product.name}
+            />
+          )
         ) : (
           <div className="flex items-center gap-3">
             <select

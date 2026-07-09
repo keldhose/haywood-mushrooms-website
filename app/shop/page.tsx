@@ -38,40 +38,52 @@ export default async function ShopPage() {
             <p className="text-muted">No products are available right now — check back soon.</p>
           ) : (
             <div className="grid grid-cols-1 gap-7 md:grid-cols-3">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex flex-col overflow-hidden rounded-[3px] border border-line bg-paper"
-                >
-                  <Link href={`/shop/${product.id}`} className="relative block h-[240px] overflow-hidden bg-[#1a1512]">
-                    <Image
-                      src={product.imageUrl}
-                      alt={product.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover"
-                    />
-                  </Link>
+              {products.map((product) => {
+                const soldOut =
+                  product.variants && product.variants.length > 0
+                    ? product.variants.every((v) => v.stockQty <= 0)
+                    : product.stockQty <= 0;
 
-                  <div className="flex flex-1 flex-col p-[26px] pb-7">
-                    <Link href={`/shop/${product.id}`}>
-                      <div className="font-serif text-[22px] leading-[1.2] text-ink">{product.name}</div>
+                return (
+                  <div
+                    key={product.id}
+                    className="flex flex-col overflow-hidden rounded-[3px] border border-line bg-paper"
+                  >
+                    <Link href={`/shop/${product.id}`} className="relative block h-[240px] overflow-hidden bg-[#1a1512]">
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-cover"
+                      />
+                      {soldOut && (
+                        <span className="absolute left-4 top-4 rounded-[2px] border border-red-300 bg-red-50/95 px-[11px] py-[6px] font-mono text-[10px] uppercase tracking-[0.16em] text-red-700">
+                          Sold out
+                        </span>
+                      )}
                     </Link>
-                    <div className="mt-[5px] font-mono text-[12px] tracking-[0.02em] text-brass">
-                      {product.scientificName}
-                    </div>
-                    <p className="mt-4 flex-1 text-[14.5px] leading-[1.5] text-muted">{product.description}</p>
 
-                    <div className="mt-5 font-serif text-[24px] text-ink">
-                      {product.variants && product.variants.length > 0
-                        ? `From $${(Math.min(...product.variants.map((v) => v.priceCents)) / 100).toFixed(2)}`
-                        : `$${(product.priceCents / 100).toFixed(2)}`}
-                    </div>
+                    <div className="flex flex-1 flex-col p-[26px] pb-7">
+                      <Link href={`/shop/${product.id}`}>
+                        <div className="font-serif text-[22px] leading-[1.2] text-ink">{product.name}</div>
+                      </Link>
+                      <div className="mt-[5px] font-mono text-[12px] tracking-[0.02em] text-brass">
+                        {product.scientificName}
+                      </div>
+                      <p className="mt-4 flex-1 text-[14.5px] leading-[1.5] text-muted">{product.description}</p>
 
-                    <AddToCart product={product} compact />
+                      <div className="mt-5 font-serif text-[24px] text-ink">
+                        {product.variants && product.variants.length > 0
+                          ? `From $${(Math.min(...product.variants.map((v) => v.priceCents)) / 100).toFixed(2)}`
+                          : `$${(product.priceCents / 100).toFixed(2)}`}
+                      </div>
+
+                      <AddToCart product={product} compact />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
