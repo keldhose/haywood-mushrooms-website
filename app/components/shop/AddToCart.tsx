@@ -104,7 +104,7 @@ export default function AddToCart({
   compact = false,
 }: {
   product: Product;
-  /** Catalog-card usage: the caller already shows price, so hide the built-in price/stock line and variant chips — just add the default (first in-stock) variant. */
+  /** Catalog-card usage: smaller price, no weight/stock line, tighter variant chips. Still fully interactive — price updates with the selected variant. */
   compact?: boolean;
 }) {
   const { addItem } = useCart();
@@ -143,20 +143,20 @@ export default function AddToCart({
 
   return (
     <div>
+      <div className={compact ? "font-serif text-[22px] text-ink" : "font-serif text-[32px] text-ink"}>
+        ${(selected.priceCents / 100).toFixed(2)}
+      </div>
       {!compact && (
-        <>
-          <div className="font-serif text-[32px] text-ink">${(selected.priceCents / 100).toFixed(2)}</div>
-          <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
-            {(selected.weightOz / 16).toFixed(1)} lb ·{" "}
-            {selected.stockQty > 0 ? `${selected.stockQty} in stock` : "Out of stock"}
-          </div>
-        </>
+        <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+          {(selected.weightOz / 16).toFixed(1)} lb ·{" "}
+          {selected.stockQty > 0 ? `${selected.stockQty} in stock` : "Out of stock"}
+        </div>
       )}
 
-      {!compact && hasVariants && (
-        <div className="mt-6">
-          <div className="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Size</div>
-          <div className="flex flex-wrap gap-2.5">
+      {hasVariants && (
+        <div className={compact ? "mt-3" : "mt-6"}>
+          {!compact && <div className="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Size</div>}
+          <div className="flex flex-wrap gap-2">
             {variants!.map((v) => {
               const soldOut = v.stockQty <= 0;
               const isSelected = v.id === selectedVariantId;
@@ -166,7 +166,9 @@ export default function AddToCart({
                   type="button"
                   disabled={soldOut}
                   onClick={() => selectVariant(v.id)}
-                  className={`min-w-[92px] rounded-[3px] border px-4 py-3 text-center transition ${
+                  className={`rounded-[3px] border text-center transition ${
+                    compact ? "min-w-[64px] px-2.5 py-1.5" : "min-w-[92px] px-4 py-3"
+                  } ${
                     soldOut
                       ? "cursor-not-allowed border-line bg-paper opacity-45"
                       : isSelected
@@ -174,10 +176,14 @@ export default function AddToCart({
                       : "border-line bg-paper hover:border-forest/50"
                   }`}
                 >
-                  <div className="text-[14px] font-semibold text-ink">{v.label}</div>
-                  <div className={`mt-[3px] font-mono text-[11px] ${soldOut ? "text-red-700" : "text-muted"}`}>
-                    {soldOut ? "Sold out" : `$${(v.priceCents / 100).toFixed(2)}`}
+                  <div className={compact ? "text-[12.5px] font-semibold text-ink" : "text-[14px] font-semibold text-ink"}>
+                    {v.label}
                   </div>
+                  {!compact && (
+                    <div className={`mt-[3px] font-mono text-[11px] ${soldOut ? "text-red-700" : "text-muted"}`}>
+                      {soldOut ? "Sold out" : `$${(v.priceCents / 100).toFixed(2)}`}
+                    </div>
+                  )}
                 </button>
               );
             })}
