@@ -1,6 +1,7 @@
 import "server-only";
 import { FieldValue, type Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
+import { sendOrderConfirmationEmail, sendShippedEmail } from "@/lib/email";
 
 export type OrderItem = {
   productId: string;
@@ -95,7 +96,7 @@ export async function markOrderPaid(
 ): Promise<void> {
   const orderRef = adminDb.collection("orders").doc(orderId);
 
-  await adminDb.runTransaction(async (tx) => {
+  const didTransition = await adminDb.runTransaction(async (tx) => {
     const orderSnap = await tx.get(orderRef);
     if (!orderSnap.exists) {
       throw new Error(`Order ${orderId} not found`);
@@ -103,7 +104,7 @@ export async function markOrderPaid(
 
     const order = orderSnap.data()!;
     if (order.status !== "pending") {
-      return;
+      return false;
     }
 
     const items = order.items as OrderItem[];
@@ -122,7 +123,23 @@ export async function markOrderPaid(
       ...stripeIds,
       updatedAt: FieldValue.serverTimestamp(),
     });
+
+    return true;
   });
+
+  // Only send on the real pending -> paid transition, never on an
+  // idempotent re-run of an already-paid order (Stripe may retry webhooks).
+  // Never let an email failure bubble up into the webhook handler.
+  if (didTransition) {
+    try {
+      const order = await getOrderById(orderId);
+      if (order) {
+        await sendOrderConfirmationEmail(order);
+      }
+    } catch (err) {
+      console.error(`Failed to send order confirmation email for order ${orderId}:`, err);
+    }
+  }
 }
 
 export async function getOrdersForUser(userId: string): Promise<Order[]> {
@@ -153,8 +170,27 @@ export async function updateOrderStatus(
   orderId: string,
   update: { status?: OrderStatus; trackingNumber?: string }
 ): Promise<void> {
-  await adminDb
-    .collection("orders")
-    .doc(orderId)
-    .update({ ...update, updatedAt: FieldValue.serverTimestamp() });
+  const orderRef = adminDb.collection("orders").doc(orderId);
+
+  // Detect a tracking number being set for the first time, before the
+  // update overwrites it, so the "shipped" email only fires once.
+  let shouldSendShippedEmail = false;
+  if (update.trackingNumber?.trim()) {
+    const snap = await orderRef.get();
+    const existingTracking = snap.exists ? (snap.data()!.trackingNumber as string | undefined) : undefined;
+    shouldSendShippedEmail = !existingTracking?.trim();
+  }
+
+  await orderRef.update({ ...update, updatedAt: FieldValue.serverTimestamp() });
+
+  if (shouldSendShippedEmail) {
+    try {
+      const order = await getOrderById(orderId);
+      if (order) {
+        await sendShippedEmail(order);
+      }
+    } catch (err) {
+      console.error(`Failed to send shipped email for order ${orderId}:`, err);
+    }
+  }
 }

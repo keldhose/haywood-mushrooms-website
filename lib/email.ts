@@ -1,0 +1,216 @@
+import "server-only";
+import { Resend } from "resend";
+import type { Order } from "@/lib/orders";
+
+const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL ?? "Haywood Mushrooms <onboarding@resend.dev>";
+const REPLY_TO = "info@haywoodmushrooms.com";
+const BASE_URL = "https://www.haywoodmushrooms.com";
+
+const COLORS = {
+  cream: "#f5f4f0",
+  paper: "#fbfaf7",
+  ink: "#14231a",
+  forest: "#1f3d2b",
+  forestDeep: "#16281d",
+  brass: "#c9a44c",
+  muted: "#5c5f57",
+  line: "#e4e2d8",
+};
+
+function shortId(order: Order): string {
+  return order.id.slice(0, 8).toUpperCase();
+}
+
+function firstName(order: Order): string {
+  return order.shippingAddress.name.trim().split(/\s+/)[0] || "there";
+}
+
+const TRACKING_URLS: Record<string, (n: string) => string> = {
+  USPS: (n) => `https://tools.usps.com/go/TrackConfirmAction?tLabels=${n}`,
+  UPS: (n) => `https://www.ups.com/track?tracknum=${n}`,
+  FEDEX: (n) => `https://www.fedex.com/fedextrack/?trknbr=${n}`,
+};
+
+function trackingUrl(order: Order): string | null {
+  if (!order.trackingNumber) return null;
+  const provider = order.shippingRate.provider?.toUpperCase() ?? "";
+  const builder = Object.entries(TRACKING_URLS).find(([key]) => provider.includes(key))?.[1];
+  return builder ? builder(order.trackingNumber) : null;
+}
+
+function emailShell(headBar: string, body: string): string {
+  return `
+<div style="background:${COLORS.cream};padding:32px 16px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="600" style="max-width:600px;width:100%;margin:0 auto;background:#ffffff;border:1px solid ${COLORS.line};border-collapse:collapse;">
+    <tr>
+      <td style="background:${COLORS.forestDeep};padding:34px 40px;">
+        <table role="presentation">
+          <tr>
+            <td style="width:12px;height:12px;border-radius:50%;background:${COLORS.brass};"></td>
+            <td style="padding-left:14px;">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;color:${COLORS.cream};">Haywood Mushrooms</div>
+              <div style="font-family:monospace;font-size:8.5px;letter-spacing:0.24em;text-transform:uppercase;color:rgba(245,244,240,0.55);margin-top:3px;">Spawn Laboratory</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:40px;">
+        ${headBar}
+        ${body}
+      </td>
+    </tr>
+    <tr>
+      <td style="background:${COLORS.ink};padding:26px 40px;text-align:center;">
+        <div style="font-family:monospace;font-size:10px;letter-spacing:0.1em;color:rgba(245,244,240,0.5);">Haywood Mushrooms &middot; Cary &amp; Moncure, NC &middot; info@haywoodmushrooms.com</div>
+      </td>
+    </tr>
+  </table>
+</div>`;
+}
+
+function orderItemsTable(order: Order): string {
+  const rows = order.items
+    .map(
+      (item) => `
+    <tr>
+      <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};">
+        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${item.name}</div>
+        <div style="font-family:monospace;font-size:11px;color:${COLORS.muted};margin-top:2px;">Qty ${item.qty}</div>
+      </td>
+      <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:16px;color:${COLORS.ink};white-space:nowrap;">$${((item.priceCents * item.qty) / 100).toFixed(2)}</td>
+    </tr>`
+    )
+    .join("");
+
+  return `
+  <table role="presentation" width="100%" style="border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:28px;">
+    ${rows}
+    <tr>
+      <td style="padding:12px 20px;font-size:13.5px;color:${COLORS.muted};">Subtotal</td>
+      <td style="padding:12px 20px;text-align:right;font-size:13.5px;color:${COLORS.muted};">$${(order.subtotalCents / 100).toFixed(2)}</td>
+    </tr>
+    <tr>
+      <td style="padding:0 20px 12px;font-size:13.5px;color:${COLORS.muted};">Shipping &mdash; ${order.shippingRate.provider} ${order.shippingRate.service}</td>
+      <td style="padding:0 20px 12px;text-align:right;font-size:13.5px;color:${COLORS.muted};">$${(order.shippingCents / 100).toFixed(2)}</td>
+    </tr>
+    <tr>
+      <td style="padding:16px 20px 18px;border-top:1px solid ${COLORS.line};font-size:15px;font-weight:600;color:${COLORS.ink};">Total</td>
+      <td style="padding:16px 20px 18px;border-top:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:20px;color:${COLORS.ink};">$${(order.totalCents / 100).toFixed(2)}</td>
+    </tr>
+  </table>`;
+}
+
+function shippingBlock(order: Order): string {
+  const addr = order.shippingAddress;
+  return `
+  <table role="presentation" width="100%" style="background:${COLORS.paper};border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:24px;">
+    <tr>
+      <td style="padding:20px;">
+        <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:8px;">Shipping to</div>
+        <div style="font-size:14px;color:${COLORS.ink};line-height:1.5;">
+          ${addr.name}<br>
+          ${addr.street1}${addr.street2 ? `, ${addr.street2}` : ""}<br>
+          ${addr.city}, ${addr.state} ${addr.zip}
+        </div>
+      </td>
+    </tr>
+  </table>`;
+}
+
+function brassButton(label: string, href: string): string {
+  return `
+  <table role="presentation" width="100%" style="margin-top:28px;"><tr><td>
+    <a href="${href}" style="display:block;text-align:center;background:${COLORS.brass};color:${COLORS.forestDeep};font-size:14.5px;font-weight:600;padding:15px 22px;border-radius:2px;text-decoration:none;">${label} &rarr;</a>
+  </td></tr></table>`;
+}
+
+export function buildOrderConfirmationHtml(order: Order): string {
+  const id = shortId(order);
+  const body = `
+    <div style="font-family:monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${COLORS.brass};">Order confirmed &middot; #${id}</div>
+    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">Thank you &mdash; your spawn is on the way to being made.</div>
+    <p style="font-size:15px;color:${COLORS.muted};margin-top:14px;line-height:1.6;">Hi ${firstName(order)}, we've received your order and payment. It's now in our production queue; you'll get a shipping note with tracking the moment it's on the way.</p>
+    ${orderItemsTable(order)}
+    ${shippingBlock(order)}
+    ${brassButton("View your order", `${BASE_URL}/account/orders/${order.id}`)}
+  `;
+  return emailShell("", body);
+}
+
+export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY is not set; skipping order confirmation email");
+    return;
+  }
+
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: FROM_EMAIL,
+      to: order.userEmail,
+      replyTo: REPLY_TO,
+      subject: `Order confirmed — Haywood Mushrooms #${shortId(order)}`,
+      html: buildOrderConfirmationHtml(order),
+    });
+    if (error) {
+      console.error("Resend error sending order confirmation email:", error);
+    }
+  } catch (err) {
+    console.error("Unexpected error sending order confirmation email:", err);
+  }
+}
+
+export function buildShippedEmailHtml(order: Order): string {
+  const id = shortId(order);
+  const trackUrl = trackingUrl(order);
+  const trackingBlock = order.trackingNumber
+    ? `
+  <table role="presentation" width="100%" style="background:${COLORS.paper};border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:24px;">
+    <tr>
+      <td style="padding:20px;">
+        <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:8px;">Tracking number</div>
+        <div style="font-family:monospace;font-size:15px;color:${COLORS.ink};">${order.trackingNumber}</div>
+      </td>
+      ${trackUrl ? `<td style="padding:20px;text-align:right;"><a href="${trackUrl}" style="display:inline-block;border:1px solid ${COLORS.forest};color:${COLORS.forest};font-size:13px;font-weight:600;padding:10px 16px;border-radius:2px;text-decoration:none;">Track &rarr;</a></td>` : ""}
+    </tr>
+  </table>`
+    : "";
+
+  const body = `
+    <div style="font-family:monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${COLORS.brass};">Shipped &middot; #${id}</div>
+    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">Your order is on its way.</div>
+    <p style="font-size:15px;color:${COLORS.muted};margin-top:14px;line-height:1.6;">Good news, ${firstName(order)} &mdash; your spawn shipped today via ${order.shippingRate.provider} ${order.shippingRate.service}. Use the tracking number below to follow it to your door. Inoculate promptly once it arrives for the healthiest colonization.</p>
+    ${trackingBlock}
+    <div style="margin-top:24px;">
+      <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};">Handling tip</div>
+      <p style="font-size:15px;color:${COLORS.muted};margin-top:8px;line-height:1.6;">Store spawn cool and out of direct sun until you're ready. It's alive &mdash; the sooner it's working in your substrate, the better.</p>
+    </div>
+    ${brassButton("View your order", `${BASE_URL}/account/orders/${order.id}`)}
+  `;
+  return emailShell("", body);
+}
+
+export async function sendShippedEmail(order: Order): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY is not set; skipping shipped email");
+    return;
+  }
+
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: FROM_EMAIL,
+      to: order.userEmail,
+      replyTo: REPLY_TO,
+      subject: "Your Haywood Mushrooms order has shipped",
+      html: buildShippedEmailHtml(order),
+    });
+    if (error) {
+      console.error("Resend error sending shipped email:", error);
+    }
+  } catch (err) {
+    console.error("Unexpected error sending shipped email:", err);
+  }
+}
