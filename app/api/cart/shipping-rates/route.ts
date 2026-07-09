@@ -91,7 +91,9 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ rates });
+    // Threaded through to checkout so it can confirm the chosen rate actually
+    // belongs to the shipment just quoted, rather than trusting any rateId.
+    return NextResponse.json({ rates, shipmentId: shipment.objectId });
   } catch (err) {
     console.error("Shippo rate lookup failed:", err);
     return NextResponse.json({ error: "Could not calculate shipping. Please check your address and try again." }, { status: 502 });

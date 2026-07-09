@@ -24,6 +24,7 @@ export default function CheckoutPage() {
   const [zip, setZip] = useState("");
 
   const [rates, setRates] = useState<Rate[] | null>(null);
+  const [shipmentId, setShipmentId] = useState<string | null>(null);
   const [selectedRateId, setSelectedRateId] = useState<string | null>(null);
   const [loadingRates, setLoadingRates] = useState(false);
   const [payingNow, setPayingNow] = useState(false);
@@ -69,6 +70,7 @@ export default function CheckoutPage() {
     setLoadingRates(true);
     setError("");
     setRates(null);
+    setShipmentId(null);
     setSelectedRateId(null);
 
     try {
@@ -87,6 +89,7 @@ export default function CheckoutPage() {
       }
 
       setRates(data.rates);
+      setShipmentId(data.shipmentId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -95,7 +98,7 @@ export default function CheckoutPage() {
   }
 
   async function handlePay() {
-    if (!selectedRateId) return;
+    if (!selectedRateId || !shipmentId) return;
     setPayingNow(true);
     setError("");
 
@@ -107,6 +110,7 @@ export default function CheckoutPage() {
           items: items.map((i) => ({ productId: i.productId, variantId: i.variantId, qty: i.qty })),
           address: { name, street1, street2, city, state, zip },
           rateId: selectedRateId,
+          shipmentId,
         }),
       });
 

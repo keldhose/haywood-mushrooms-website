@@ -20,10 +20,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { items, address, rateId } = (body ?? {}) as {
+  const { items, address, rateId, shipmentId } = (body ?? {}) as {
     items?: RequestItem[];
     address?: ShippingAddress;
     rateId?: string;
+    shipmentId?: string;
   };
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -34,6 +35,9 @@ export async function POST(request: Request) {
   }
   if (typeof rateId !== "string" || !rateId) {
     return NextResponse.json({ error: "Please select a shipping option." }, { status: 400 });
+  }
+  if (typeof shipmentId !== "string" || !shipmentId) {
+    return NextResponse.json({ error: "Please recalculate shipping and try again." }, { status: 400 });
   }
 
   // Re-derive everything charge-relevant server-side — never trust
@@ -66,6 +70,17 @@ export async function POST(request: Request) {
   let shippingRate: { provider: string; service: string; amountCents: number; estimatedDays?: number };
   try {
     const rate = await shippo.rates.get(rateId);
+
+    // Confirm the rate actually belongs to the shipment just quoted for this
+    // cart/address — without this, a stale rateId from an earlier, different
+    // quote (e.g. a lighter cart) would still be accepted at its old price.
+    if (rate.shipment !== shipmentId) {
+      return NextResponse.json(
+        { error: "That shipping option expired. Please recalculate shipping and try again." },
+        { status: 400 }
+      );
+    }
+
     shippingRate = {
       provider: rate.provider,
       service: rate.servicelevel?.name ?? "Shipping",
