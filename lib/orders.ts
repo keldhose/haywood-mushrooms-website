@@ -1,7 +1,7 @@
 import "server-only";
 import { FieldValue, type Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
-import { sendOrderConfirmationEmail, sendShippedEmail } from "@/lib/email";
+import { sendOrderConfirmationEmail, sendShippedEmail, sendAdminOrderNotification } from "@/lib/email";
 
 export type OrderItem = {
   productId: string;
@@ -227,13 +227,18 @@ export async function markOrderPaid(
   // idempotent re-run of an already-paid order (Stripe may retry webhooks).
   // Never let an email failure bubble up into the webhook handler.
   if (didTransition) {
-    try {
-      const order = await getOrderById(orderId);
-      if (order) {
+    const order = await getOrderById(orderId).catch(() => null);
+    if (order) {
+      try {
         await sendOrderConfirmationEmail(order);
+      } catch (err) {
+        console.error(`Failed to send order confirmation email for order ${orderId}:`, err);
       }
-    } catch (err) {
-      console.error(`Failed to send order confirmation email for order ${orderId}:`, err);
+      try {
+        await sendAdminOrderNotification(order);
+      } catch (err) {
+        console.error(`Failed to send admin order notification for order ${orderId}:`, err);
+      }
     }
   }
 }

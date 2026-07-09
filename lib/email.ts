@@ -170,6 +170,49 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
   }
 }
 
+export function buildAdminOrderNotificationHtml(order: Order): string {
+  const id = shortId(order);
+  const body = `
+    <div style="font-family:monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${COLORS.brass};">New order &middot; #${id}</div>
+    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">$${(order.totalCents / 100).toFixed(2)} from ${firstName(order)}.</div>
+    <table role="presentation" width="100%" style="background:${COLORS.paper};border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:20px;">
+      <tr>
+        <td style="padding:16px 20px;">
+          <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:6px;">Customer</div>
+          <div style="font-size:14px;color:${COLORS.ink};">${order.shippingAddress.name} &middot; ${order.userEmail}</div>
+        </td>
+      </tr>
+    </table>
+    ${orderItemsTable(order)}
+    ${shippingBlock(order)}
+    ${brassButton("View order in admin", `${BASE_URL}/admin/orders/${order.id}`)}
+  `;
+  return emailShell("", body);
+}
+
+export async function sendAdminOrderNotification(order: Order): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY is not set; skipping admin order notification");
+    return;
+  }
+
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: FROM_EMAIL,
+      to: REPLY_TO,
+      replyTo: order.userEmail,
+      subject: `New order — $${(order.totalCents / 100).toFixed(2)} (#${shortId(order)})`,
+      html: buildAdminOrderNotificationHtml(order),
+    });
+    if (error) {
+      console.error("Resend error sending admin order notification:", error);
+    }
+  } catch (err) {
+    console.error("Unexpected error sending admin order notification:", err);
+  }
+}
+
 export function buildShippedEmailHtml(order: Order): string {
   const id = shortId(order);
   const trackUrl = trackingUrl(order);
