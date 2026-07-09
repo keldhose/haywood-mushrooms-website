@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { shippo, SHIP_FROM_ADDRESS, DEFAULT_PARCEL } from "@/lib/shippo";
 import { getProductsByIds, getVariant } from "@/lib/products";
+import { releaseExpiredPendingOrders } from "@/lib/orders";
 
 type RequestItem = { productId: string; variantId?: string; qty: number };
 type RequestAddress = {
@@ -35,6 +36,14 @@ export async function POST(request: Request) {
     !address.zip?.trim()
   ) {
     return NextResponse.json({ error: "A complete shipping address is required." }, { status: 400 });
+  }
+
+  // Free any stale reservations from abandoned checkouts before checking
+  // availability — best-effort, never blocks this request on its own.
+  try {
+    await releaseExpiredPendingOrders();
+  } catch (err) {
+    console.error("Failed to release expired pending orders:", err);
   }
 
   const products = await getProductsByIds(items.map((i) => i.productId));

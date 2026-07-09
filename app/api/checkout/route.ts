@@ -3,7 +3,14 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getProductsByIds, getVariant } from "@/lib/products";
 import { shippo } from "@/lib/shippo";
 import { stripe } from "@/lib/stripe";
-import { createPendingOrder, type OrderItem, type ShippingAddress } from "@/lib/orders";
+import {
+  createPendingOrder,
+  cancelPendingOrder,
+  releaseExpiredPendingOrders,
+  InsufficientStockError,
+  type OrderItem,
+  type ShippingAddress,
+} from "@/lib/orders";
 
 type RequestItem = { productId: string; variantId?: string; qty: number };
 
@@ -38,6 +45,14 @@ export async function POST(request: Request) {
   }
   if (typeof shipmentId !== "string" || !shipmentId) {
     return NextResponse.json({ error: "Please recalculate shipping and try again." }, { status: 400 });
+  }
+
+  // Free any stale reservations from abandoned checkouts before checking
+  // availability — best-effort, never blocks this request on its own.
+  try {
+    await releaseExpiredPendingOrders();
+  } catch (err) {
+    console.error("Failed to release expired pending orders:", err);
   }
 
   // Re-derive everything charge-relevant server-side — never trust
@@ -96,16 +111,25 @@ export async function POST(request: Request) {
   const shippingCents = shippingRate.amountCents;
   const totalCents = subtotalCents + shippingCents;
 
-  const orderId = await createPendingOrder({
-    userId: user.uid,
-    userEmail: user.email,
-    items: orderItems,
-    subtotalCents,
-    shippingCents,
-    totalCents,
-    shippingAddress: address,
-    shippingRate,
-  });
+  let orderId: string;
+  try {
+    orderId = await createPendingOrder({
+      userId: user.uid,
+      userEmail: user.email,
+      items: orderItems,
+      subtotalCents,
+      shippingCents,
+      totalCents,
+      shippingAddress: address,
+      shippingRate,
+    });
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    console.error("Failed to create pending order:", err);
+    return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 500 });
+  }
 
   const origin = new URL(request.url).origin;
 
@@ -141,6 +165,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: session.url });
   } catch (err) {
     console.error("Failed to create Stripe Checkout session:", err);
+    // Release the reservation now rather than leaving it locked for up to
+    // RESERVATION_TTL_MS — the customer never got a checkout URL to pay with.
+    try {
+      await cancelPendingOrder(orderId);
+    } catch (releaseErr) {
+      console.error(`Failed to release reservation for order ${orderId} after checkout failure:`, releaseErr);
+    }
     return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
   }
 }
