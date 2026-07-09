@@ -38,7 +38,7 @@ function trackingUrl(order: Order): string | null {
   return builder ? builder(order.trackingNumber) : null;
 }
 
-function emailShell(headBar: string, body: string): string {
+export function emailShell(headBar: string, body: string): string {
   return `
 <div style="background:${COLORS.cream};padding:32px 16px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;">
   <table role="presentation" width="600" style="max-width:600px;width:100%;margin:0 auto;background:#ffffff;border:1px solid ${COLORS.line};border-collapse:collapse;">
@@ -119,7 +119,7 @@ function shippingBlock(order: Order): string {
   </table>`;
 }
 
-function brassButton(label: string, href: string): string {
+export function brassButton(label: string, href: string): string {
   return `
   <table role="presentation" width="100%" style="margin-top:28px;"><tr><td>
     <a href="${href}" style="display:block;text-align:center;background:${COLORS.brass};color:${COLORS.forestDeep};font-size:14.5px;font-weight:600;padding:15px 22px;border-radius:2px;text-decoration:none;">${label} &rarr;</a>
