@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -46,6 +46,10 @@ export const metadata: Metadata = {
     ],
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#16281d",
 };
 
 export default function RootLayout({
