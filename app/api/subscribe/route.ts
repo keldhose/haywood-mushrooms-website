@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
+import { createWelcomeDiscountCode } from "@/lib/welcome-discount";
+import { sendWelcomeDiscountEmail } from "@/lib/email";
 
 const TO_EMAIL = "info@haywoodmushrooms.com";
 const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL ?? "Haywood Mushrooms <onboarding@resend.dev>";
@@ -47,10 +49,19 @@ export async function POST(request: Request) {
       console.error("Resend error:", error);
       return NextResponse.json({ error: "Failed to subscribe." }, { status: 502 });
     }
-
-    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Unexpected error sending subscribe notification:", err);
     return NextResponse.json({ error: "Failed to subscribe." }, { status: 500 });
   }
+
+  // Best-effort — the signup itself already succeeded above, so a hiccup
+  // here (Stripe or Resend) shouldn't turn into a failed subscribe request.
+  try {
+    const code = await createWelcomeDiscountCode();
+    await sendWelcomeDiscountEmail(email, code);
+  } catch (err) {
+    console.error(`Failed to create/send welcome discount code for ${email}:`, err);
+  }
+
+  return NextResponse.json({ ok: true });
 }

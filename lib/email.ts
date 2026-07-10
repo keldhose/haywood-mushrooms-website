@@ -260,6 +260,47 @@ export async function sendLowStockAlert(crossings: LowStockCrossing[]): Promise<
   }
 }
 
+export function buildWelcomeDiscountHtml(code: string): string {
+  const body = `
+    <div style="font-family:monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${COLORS.brass};">Welcome</div>
+    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">10% off your first order.</div>
+    <p style="font-size:15px;color:${COLORS.muted};margin-top:14px;line-height:1.6;">Thanks for joining the growers' list — here's a code for 10% off your first order. Good for 30 days.</p>
+    <table role="presentation" width="100%" style="border:1px dashed ${COLORS.brass};border-radius:4px;background:${COLORS.paper};margin-top:24px;">
+      <tr>
+        <td style="padding:24px;text-align:center;">
+          <div style="font-family:monospace;font-size:22px;font-weight:600;letter-spacing:0.08em;color:${COLORS.ink};">${code}</div>
+        </td>
+      </tr>
+    </table>
+    <p style="font-size:13.5px;color:${COLORS.muted};margin-top:14px;line-height:1.5;">Enter it on the payment page at checkout.</p>
+    ${brassButton("Shop now", `${BASE_URL}/shop`)}
+  `;
+  return emailShell("", body);
+}
+
+export async function sendWelcomeDiscountEmail(toEmail: string, code: string): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY is not set; skipping welcome discount email");
+    return;
+  }
+
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: FROM_EMAIL,
+      to: toEmail,
+      replyTo: REPLY_TO,
+      subject: "Here's 10% off your first order",
+      html: buildWelcomeDiscountHtml(code),
+    });
+    if (error) {
+      console.error("Resend error sending welcome discount email:", error);
+    }
+  } catch (err) {
+    console.error("Unexpected error sending welcome discount email:", err);
+  }
+}
+
 export function buildShippedEmailHtml(order: Order): string {
   const id = shortId(order);
   const trackUrl = trackingUrl(order);
