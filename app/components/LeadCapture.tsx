@@ -60,15 +60,15 @@ export default function LeadCapture() {
             <div className="mt-10 flex flex-col gap-0">
               <div className="flex gap-3.5" style={{ alignItems: "baseline" }}>
                 <span className="w-[120px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Inquiries</span>
-                <span className="text-[16px] text-cream">info@haywoodmushrooms.com</span>
+                <span className="min-w-0 break-words text-[16px] text-cream">info@haywoodmushrooms.com</span>
               </div>
               <div className="mt-[14px] flex gap-3.5" style={{ alignItems: "baseline" }}>
                 <span className="w-[120px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Research lab</span>
-                <span className="text-[16px] text-cream">Cary, North Carolina</span>
+                <span className="min-w-0 break-words text-[16px] text-cream">Cary, North Carolina</span>
               </div>
               <div className="mt-[14px] flex gap-3.5" style={{ alignItems: "baseline" }}>
                 <span className="w-[120px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Production</span>
-                <span className="text-[16px] text-cream">Moncure, North Carolina</span>
+                <span className="min-w-0 break-words text-[16px] text-cream">Moncure, North Carolina</span>
               </div>
             </div>
           </div>

@@ -46,7 +46,7 @@ export function emailShell(headBar: string, body: string): string {
       <td style="background:${COLORS.forestDeep};padding:34px 40px;">
         <table role="presentation">
           <tr>
-            <td style="width:12px;height:12px;border-radius:50%;background:${COLORS.brass};"></td>
+            <td style="width:28px;"><img src="${BASE_URL}/email-icon.png" width="28" height="28" alt="" style="display:block;border-radius:6px;" /></td>
             <td style="padding-left:14px;">
               <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;color:${COLORS.cream};">Haywood Mushrooms</div>
               <div style="font-family:monospace;font-size:8.5px;letter-spacing:0.24em;text-transform:uppercase;color:rgba(245,244,240,0.55);margin-top:3px;">Spawn Laboratory</div>

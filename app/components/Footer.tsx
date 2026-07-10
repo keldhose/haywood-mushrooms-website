@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
@@ -7,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-10 border-b border-white/10 pb-14 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:gap-10">
           <div>
             <div className="flex items-center gap-3">
-              <span className="h-[13px] w-[13px] flex-none rounded-full bg-brass shadow-[0_0_0_4px_rgba(201,164,76,0.18)]" />
+              <Image src="/icon.svg" alt="" width={28} height={28} className="flex-none rounded-[6px] ring-1 ring-white/10" />
               <span>
                 <span className="block font-serif text-[23px] leading-none tracking-[0.01em] text-cream">
                   Haywood Mushrooms

@@ -57,25 +57,25 @@ export default function ContactPage() {
           <div className="mt-11 flex flex-col">
             <div className="flex gap-4 border-t border-white/10 py-5" style={{ alignItems: "baseline" }}>
               <span className="w-[130px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Inquiries</span>
-              <span className="text-[16px] text-cream">info@haywoodmushrooms.com</span>
+              <span className="min-w-0 break-words text-[16px] text-cream">info@haywoodmushrooms.com</span>
             </div>
             <div className="flex gap-4 border-t border-white/10 py-5" style={{ alignItems: "baseline" }}>
               <span className="w-[130px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Research lab</span>
-              <span className="text-[16px] text-cream">
+              <span className="min-w-0 break-words text-[16px] text-cream">
                 Cary, North Carolina
                 <span className="mt-[3px] block text-[13px] text-cream/55">Sterile culture development &amp; strain selection</span>
               </span>
             </div>
             <div className="flex gap-4 border-t border-white/10 py-5" style={{ alignItems: "baseline" }}>
               <span className="w-[130px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Production</span>
-              <span className="text-[16px] text-cream">
+              <span className="min-w-0 break-words text-[16px] text-cream">
                 Moncure, North Carolina
                 <span className="mt-[3px] block text-[13px] text-cream/55">Spawn production &amp; gourmet cultivation</span>
               </span>
             </div>
             <div className="flex gap-4 border-y border-white/10 py-5" style={{ alignItems: "baseline" }}>
               <span className="w-[130px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Response</span>
-              <span className="text-[16px] text-cream">Typically within 1–2 business days</span>
+              <span className="min-w-0 break-words text-[16px] text-cream">Typically within 1–2 business days</span>
             </div>
           </div>
         </div>

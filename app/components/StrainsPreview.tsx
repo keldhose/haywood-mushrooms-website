@@ -1,27 +1,30 @@
 import Image from "next/image";
 import Link from "next/link";
 
+// Kept in sync with the first three strains on /strains — same order,
+// same photos — so the story is consistent from hero to homepage to the
+// full strains page instead of showing a different top-3 in each place.
 const strains = [
+  {
+    name: "Blue Oyster",
+    scientific: "Pleurotus ostreatus var.",
+    image: "/blue-oyster-cluster.webp",
+    desc: "Cool-weather oyster with steel-blue caps that fade to silver — firm texture and a strong cold-season performer.",
+    stats: { growth: "Fast", temp: "50–70°F", yield: "High" },
+  },
   {
     name: "Pink Oyster",
     scientific: "Pleurotus djamor",
-    image: "/pink-oyster.png",
+    image: "/pink-oyster-cluster.jpeg",
     desc: "Fast, warm-loving tropical oyster with vivid coral fruiting bodies and a striking short cycle.",
     stats: { growth: "Ultra-fast", temp: "70–85°F", yield: "High" },
   },
   {
     name: "Grey Oyster",
     scientific: "Pleurotus ostreatus",
-    image: "/grey-oyster-harvest.jpg",
+    image: "/oyster-grow-bag.jpg",
     desc: "The dependable commercial workhorse — aggressive colonization, thick caps, wide substrate tolerance.",
     stats: { growth: "Aggressive", temp: "55–75°F", yield: "Very high" },
-  },
-  {
-    name: "Lion's Mane",
-    scientific: "Hericium erinaceus",
-    image: "/lions-mane.jpg",
-    desc: "Selected for vigorous mycelium and dense, cascading icicle-like fruiting bodies prized by chefs.",
-    stats: { growth: "Steady", temp: "60–75°F", yield: "High" },
   },
 ];
 

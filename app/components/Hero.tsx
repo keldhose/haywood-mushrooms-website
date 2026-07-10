@@ -60,7 +60,7 @@ export default async function Hero() {
     <section className="grid min-h-[calc(100vh-78px)] grid-cols-1 md:grid-cols-[1.02fr_0.98fr]">
       <div className="flex flex-col justify-center px-6 py-16 md:px-[72px] md:py-0">
         <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-brass">
-          Plant-pathology-led spawn laboratory
+          Science-led mushroom spawn
         </span>
         <h1 className="mt-6 text-[clamp(44px,5.6vw,82px)] leading-[1.05] tracking-[-0.025em]">
           Spawn engineered with a <em className="font-serif italic text-forest">scientist&apos;s</em> precision.
