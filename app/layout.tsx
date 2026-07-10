@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import FloatingCartButton from "./components/FloatingCartButton";
 import { CartProvider } from "@/context/CartContext";
 import "./globals.css";
 
@@ -87,6 +88,7 @@ export default function RootLayout({
           <Navbar />
           {children}
           <Footer />
+          <FloatingCartButton />
         </CartProvider>
       </body>
     </html>
