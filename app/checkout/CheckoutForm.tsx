@@ -15,10 +15,17 @@ type Rate = {
   estimatedDays?: number;
 };
 
-export default function CheckoutForm({ savedAddress }: { savedAddress: ShippingAddress | null }) {
+export default function CheckoutForm({
+  savedAddress,
+  userEmail,
+}: {
+  savedAddress: ShippingAddress | null;
+  userEmail: string | null;
+}) {
   const router = useRouter();
   const { items, subtotalCents } = useCart();
 
+  const [email, setEmail] = useState(userEmail ?? "");
   const [name, setName] = useState(savedAddress?.name ?? "");
   const [street1, setStreet1] = useState(savedAddress?.street1 ?? "");
   const [street2, setStreet2] = useState(savedAddress?.street2 ?? "");
@@ -102,6 +109,10 @@ export default function CheckoutForm({ savedAddress }: { savedAddress: ShippingA
 
   async function handlePay() {
     if (!selectedRateId || !shipmentId) return;
+    if (!userEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email.");
+      return;
+    }
     setPayingNow(true);
     setError("");
 
@@ -112,6 +123,7 @@ export default function CheckoutForm({ savedAddress }: { savedAddress: ShippingA
         body: JSON.stringify({
           items: items.map((i) => ({ productId: i.productId, variantId: i.variantId, qty: i.qty })),
           address: { name, street1, street2, city, state, zip },
+          email,
           rateId: selectedRateId,
           shipmentId,
         }),
@@ -146,7 +158,28 @@ export default function CheckoutForm({ savedAddress }: { savedAddress: ShippingA
 
         <div className="mt-8 grid grid-cols-1 gap-10 md:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <form onSubmit={handleGetRates}>
+            <div className="font-serif text-[22px] text-ink">Contact</div>
+            {userEmail ? (
+              <p className="mt-1.5 text-[13px] text-muted">
+                Checking out as <span className="font-medium text-ink">{userEmail}</span>.
+              </p>
+            ) : (
+              <>
+                <p className="mt-1.5 text-[13px] text-muted">Checking out as a guest — we&apos;ll send your receipt here.</p>
+                <div className="mt-4">
+                  <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full max-w-[400px] rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
+                  />
+                </div>
+              </>
+            )}
+
+            <form onSubmit={handleGetRates} className="mt-8">
               <div className="font-serif text-[22px] text-ink">Shipping address</div>
               <p className="mt-1.5 text-[13px] text-muted">
                 Currently shipping within the United States only.
@@ -330,7 +363,7 @@ export default function CheckoutForm({ savedAddress }: { savedAddress: ShippingA
             <button
               type="button"
               onClick={handlePay}
-              disabled={!selectedRate || payingNow}
+              disabled={!selectedRate || payingNow || (!userEmail && !email.trim())}
               className="mt-5 w-full justify-center rounded-[2px] bg-brass py-[13px] text-[14.5px] font-semibold text-forest-deep transition hover:brightness-[1.06] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {payingNow ? "Redirecting to payment…" : "Pay now"}

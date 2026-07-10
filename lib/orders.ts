@@ -206,7 +206,8 @@ async function applyStockDelta(
  * that lost the race) if reservation fails; the order is not created.
  */
 export async function createPendingOrder(input: {
-  userId: string;
+  /** Absent for a guest checkout with no matching account. */
+  userId?: string;
   userEmail: string;
   items: OrderItem[];
   subtotalCents: number;
@@ -217,6 +218,7 @@ export async function createPendingOrder(input: {
 }): Promise<string> {
   const orderRef = adminDb.collection("orders").doc();
   let lowStockCrossings: LowStockCrossing[] = [];
+  const { userId, ...rest } = input;
 
   await adminDb.runTransaction(async (tx) => {
     const result = await applyStockDelta(tx, input.items, -1);
@@ -229,7 +231,10 @@ export async function createPendingOrder(input: {
     lowStockCrossings = result.lowStockCrossings;
 
     tx.set(orderRef, {
-      ...input,
+      ...rest,
+      // Firestore rejects an explicit `undefined` field — omit it entirely
+      // for a guest checkout rather than spreading input.userId as-is.
+      ...(userId ? { userId } : {}),
       channel: "online" satisfies OrderChannel,
       status: "pending" satisfies OrderStatus,
       expiresAt: new Date(Date.now() + RESERVATION_TTL_MS),

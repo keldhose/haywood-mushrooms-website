@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
+import { adminAuth } from "@/lib/firebase/admin";
 import { getProductsByIds, getVariant } from "@/lib/products";
 import { shippo } from "@/lib/shippo";
 import { stripe } from "@/lib/stripe";
@@ -14,12 +15,10 @@ import {
 import { saveAddress } from "@/lib/users";
 
 type RequestItem = { productId: string; variantId?: string; qty: number };
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user || !user.email) {
-    return NextResponse.json({ error: "Please log in to check out." }, { status: 401 });
-  }
 
   let body: unknown;
   try {
@@ -28,12 +27,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { items, address, rateId, shipmentId } = (body ?? {}) as {
+  const { items, address, rateId, shipmentId, email: guestEmail } = (body ?? {}) as {
     items?: RequestItem[];
     address?: ShippingAddress;
     rateId?: string;
     shipmentId?: string;
+    email?: string;
   };
+
+  // Logged-in customers checkout with their account email; guests supply
+  // one on the form — either way, an order needs somewhere to send the
+  // receipt and shipping updates.
+  const email = user?.email ?? guestEmail?.trim();
+  if (!email || !EMAIL_PATTERN.test(email)) {
+    return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
+  }
 
   if (!Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "Cart is empty." }, { status: 400 });
@@ -46,6 +54,19 @@ export async function POST(request: Request) {
   }
   if (typeof shipmentId !== "string" || !shipmentId) {
     return NextResponse.json({ error: "Please recalculate shipping and try again." }, { status: 400 });
+  }
+
+  // A guest checking out with an email that matches an existing account
+  // gets the order linked to it — same as the admin's local-sale tool —
+  // so it shows up in "My orders" if/when they log in.
+  let userId = user?.uid;
+  if (!userId) {
+    try {
+      const existing = await adminAuth.getUserByEmail(email);
+      userId = existing.uid;
+    } catch {
+      // No account with this email — the common case for a guest.
+    }
   }
 
   // Free any stale reservations from abandoned checkouts before checking
@@ -116,8 +137,8 @@ export async function POST(request: Request) {
   let orderId: string;
   try {
     orderId = await createPendingOrder({
-      userId: user.uid,
-      userEmail: user.email,
+      userId,
+      userEmail: email,
       items: orderItems,
       subtotalCents,
       shippingCents,
@@ -133,11 +154,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 500 });
   }
 
-  // Remember this address for next time — best-effort, never blocks checkout.
-  try {
-    await saveAddress(user.uid, address);
-  } catch (err) {
-    console.error(`Failed to save address for user ${user.uid}:`, err);
+  // Remember this address for next time — logged-in customers only, a
+  // guest has no account to save it to. Best-effort, never blocks checkout.
+  if (user) {
+    try {
+      await saveAddress(user.uid, address);
+    } catch (err) {
+      console.error(`Failed to save address for user ${user.uid}:`, err);
+    }
   }
 
   const origin = new URL(request.url).origin;
@@ -145,7 +169,7 @@ export async function POST(request: Request) {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer_email: user.email,
+      customer_email: email,
       client_reference_id: orderId,
       metadata: { orderId },
       allow_promotion_codes: true,
@@ -167,7 +191,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${origin}/account/orders/${orderId}?success=true`,
+      success_url: `${origin}/order/${orderId}?success=true`,
       cancel_url: `${origin}/cart`,
     });
 
