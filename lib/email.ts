@@ -148,6 +148,8 @@ export function buildOrderConfirmationHtml(order: Order): string {
 }
 
 export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
+  if (!order.userEmail) return;
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("RESEND_API_KEY is not set; skipping order confirmation email");
@@ -179,7 +181,7 @@ export function buildAdminOrderNotificationHtml(order: Order): string {
       <tr>
         <td style="padding:16px 20px;">
           <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:6px;">Customer</div>
-          <div style="font-size:14px;color:${COLORS.ink};">${order.shippingAddress.name} &middot; ${order.userEmail}</div>
+          <div style="font-size:14px;color:${COLORS.ink};">${order.shippingAddress.name} &middot; ${order.userEmail ?? "no email"}</div>
         </td>
       </tr>
     </table>
@@ -201,7 +203,7 @@ export async function sendAdminOrderNotification(order: Order): Promise<void> {
     const { error } = await new Resend(apiKey).emails.send({
       from: FROM_EMAIL,
       to: REPLY_TO,
-      replyTo: order.userEmail,
+      replyTo: order.userEmail || REPLY_TO,
       subject: `New order — $${(order.totalCents / 100).toFixed(2)} (#${shortId(order)})`,
       html: buildAdminOrderNotificationHtml(order),
     });
@@ -331,7 +333,72 @@ export function buildShippedEmailHtml(order: Order): string {
   return emailShell("", body);
 }
 
+function invoiceItemsTable(order: Order): string {
+  const rows = order.items
+    .map(
+      (item) => `
+    <tr>
+      <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};">
+        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${item.name}${item.variantLabel ? ` &mdash; ${item.variantLabel}` : ""}</div>
+        <div style="font-family:monospace;font-size:11px;color:${COLORS.muted};margin-top:2px;">Qty ${item.qty}</div>
+      </td>
+      <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:16px;color:${COLORS.ink};white-space:nowrap;">$${((item.priceCents * item.qty) / 100).toFixed(2)}</td>
+    </tr>`
+    )
+    .join("");
+
+  return `
+  <table role="presentation" width="100%" style="border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:28px;">
+    ${rows}
+    <tr>
+      <td style="padding:16px 20px 18px;border-top:1px solid ${COLORS.line};font-size:15px;font-weight:600;color:${COLORS.ink};">Total &mdash; paid</td>
+      <td style="padding:16px 20px 18px;border-top:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:20px;color:${COLORS.ink};">$${(order.totalCents / 100).toFixed(2)}</td>
+    </tr>
+  </table>`;
+}
+
+/** Invoice for an in-person local sale (cash/Venmo/PayPal/Zelle) — no shipment involved, so this omits the shipping line/address block the online templates use. */
+export function buildLocalSaleInvoiceHtml(order: Order): string {
+  const id = shortId(order);
+  const date = order.createdAt ? order.createdAt.toLocaleDateString() : "";
+  const buyer = order.buyerName ?? order.shippingAddress.name;
+  const body = `
+    <div style="font-family:monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${COLORS.brass};">Invoice &middot; #${id}</div>
+    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">$${(order.totalCents / 100).toFixed(2)} &mdash; paid in full.</div>
+    <p style="font-size:15px;color:${COLORS.muted};margin-top:14px;line-height:1.6;">Thanks, ${buyer}! Here's your receipt for the order picked up in person${date ? ` on ${date}` : ""}, paid via ${order.paymentMethod ?? "cash"}.</p>
+    ${invoiceItemsTable(order)}
+  `;
+  return emailShell("", body);
+}
+
+export async function sendLocalSaleInvoiceEmail(order: Order): Promise<void> {
+  if (!order.userEmail) return;
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY is not set; skipping local sale invoice email");
+    return;
+  }
+
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: FROM_EMAIL,
+      to: order.userEmail,
+      replyTo: REPLY_TO,
+      subject: `Your invoice — Haywood Mushrooms #${shortId(order)}`,
+      html: buildLocalSaleInvoiceHtml(order),
+    });
+    if (error) {
+      console.error("Resend error sending local sale invoice email:", error);
+    }
+  } catch (err) {
+    console.error("Unexpected error sending local sale invoice email:", err);
+  }
+}
+
 export async function sendShippedEmail(order: Order): Promise<void> {
+  if (!order.userEmail) return;
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("RESEND_API_KEY is not set; skipping shipped email");

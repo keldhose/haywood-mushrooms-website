@@ -1,6 +1,6 @@
 import "server-only";
 import { FieldValue, type Timestamp } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { sendOrderConfirmationEmail, sendShippedEmail, sendAdminOrderNotification, sendLowStockAlert } from "@/lib/email";
 
 export type OrderItem = {
@@ -33,10 +33,20 @@ export type ShippingRate = {
 
 export type OrderStatus = "pending" | "paid" | "fulfilled" | "cancelled";
 
+/** Absent/"online" = placed through Stripe checkout. "local" = recorded by an admin for an in-person pickup sale. */
+export type OrderChannel = "online" | "local";
+
 export type Order = {
   id: string;
-  userId: string;
-  userEmail: string;
+  /** Absent on a local sale to a buyer with no site account. */
+  userId?: string;
+  /** Absent on a local sale where the buyer didn't give an email. */
+  userEmail?: string;
+  /** Set on local sales, so the order has a name to show without a userId. */
+  buyerName?: string;
+  channel: OrderChannel;
+  /** Set on local sales: "Cash", "Venmo", "PayPal", "Zelle", or "Other". Absent on online orders (paid via Stripe). */
+  paymentMethod?: string;
   items: OrderItem[];
   subtotalCents: number;
   shippingCents: number;
@@ -85,6 +95,9 @@ function toOrder(id: string, data: FirebaseFirestore.DocumentData): Order {
     id,
     userId: data.userId,
     userEmail: data.userEmail,
+    buyerName: data.buyerName,
+    channel: (data.channel as OrderChannel) ?? "online",
+    paymentMethod: data.paymentMethod,
     items: data.items,
     subtotalCents: data.subtotalCents,
     shippingCents: data.shippingCents,
@@ -217,8 +230,91 @@ export async function createPendingOrder(input: {
 
     tx.set(orderRef, {
       ...input,
+      channel: "online" satisfies OrderChannel,
       status: "pending" satisfies OrderStatus,
       expiresAt: new Date(Date.now() + RESERVATION_TTL_MS),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  if (lowStockCrossings.length > 0) {
+    try {
+      await sendLowStockAlert(lowStockCrossings);
+    } catch (err) {
+      console.error("Failed to send low-stock alert:", err);
+    }
+  }
+
+  return orderRef.id;
+}
+
+/**
+ * Admin-only: records an in-person sale (grower pickup paid by cash/Venmo/
+ * PayPal/Zelle/etc.) as a real, immediately-"paid" order — no Stripe
+ * involvement, since payment already happened off-platform. Decrements
+ * stock the same way any online sale does, so inventory stays accurate
+ * regardless of channel, and reuses the same low-stock alerting.
+ *
+ * If the buyer's email matches an existing account, the order is linked to
+ * that userId so it shows up in their "My orders" too — otherwise it's a
+ * standalone record keyed off buyerName/email with no account.
+ *
+ * There's no shipment for a pickup, so shippingAddress/shippingRate (which
+ * every other part of the app assumes exist) are filled with a "local
+ * pickup" placeholder rather than making those fields optional everywhere.
+ */
+export async function createLocalOrder(input: {
+  buyerName: string;
+  buyerEmail?: string;
+  items: OrderItem[];
+  subtotalCents: number;
+  paymentMethod: string;
+}): Promise<string> {
+  let userId: string | undefined;
+  if (input.buyerEmail) {
+    try {
+      const existing = await adminAuth.getUserByEmail(input.buyerEmail);
+      userId = existing.uid;
+    } catch {
+      // No account with this email — that's the common case, not an error.
+    }
+  }
+
+  const shippingAddress: ShippingAddress = {
+    name: input.buyerName,
+    street1: "Local pickup",
+    city: "-",
+    state: "-",
+    zip: "-",
+    country: "US",
+  };
+  const shippingRate: ShippingRate = { provider: "Local pickup", service: "In person", amountCents: 0 };
+
+  const orderRef = adminDb.collection("orders").doc();
+  let lowStockCrossings: LowStockCrossing[] = [];
+
+  await adminDb.runTransaction(async (tx) => {
+    const result = await applyStockDelta(tx, input.items, -1);
+    if (!result.ok) {
+      throw new InsufficientStockError(result.item, result.available);
+    }
+    lowStockCrossings = result.lowStockCrossings;
+
+    tx.set(orderRef, {
+      ...(userId ? { userId } : {}),
+      ...(input.buyerEmail ? { userEmail: input.buyerEmail } : {}),
+      buyerName: input.buyerName,
+      channel: "local" satisfies OrderChannel,
+      paymentMethod: input.paymentMethod,
+      items: input.items,
+      subtotalCents: input.subtotalCents,
+      shippingCents: 0,
+      totalCents: input.subtotalCents,
+      shippingAddress,
+      shippingRate,
+      status: "paid" satisfies OrderStatus,
+      expiresAt: null,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });

@@ -32,7 +32,12 @@ export default async function OrderDetailPage({
           <ReorderButton items={order.items} />
         </div>
 
-        {order.status === "paid" && (
+        {order.status === "paid" && order.channel === "local" && (
+          <div className="mt-4 rounded-[2px] border border-forest bg-paper px-4 py-3 text-[14px] text-forest">
+            Payment received — paid in person via {order.paymentMethod}.
+          </div>
+        )}
+        {order.status === "paid" && order.channel !== "local" && (
           <div className="mt-4 rounded-[2px] border border-forest bg-paper px-4 py-3 text-[14px] text-forest">
             Payment received — a receipt was emailed to you by Stripe.
           </div>
@@ -65,12 +70,14 @@ export default async function OrderDetailPage({
             <span className="text-muted">Subtotal</span>
             <span className="text-ink">${(order.subtotalCents / 100).toFixed(2)}</span>
           </div>
-          <div className="mt-2 flex justify-between text-[14.5px]">
-            <span className="text-muted">
-              Shipping ({order.shippingRate.provider} {order.shippingRate.service})
-            </span>
-            <span className="text-ink">${(order.shippingCents / 100).toFixed(2)}</span>
-          </div>
+          {order.channel !== "local" && (
+            <div className="mt-2 flex justify-between text-[14.5px]">
+              <span className="text-muted">
+                Shipping ({order.shippingRate.provider} {order.shippingRate.service})
+              </span>
+              <span className="text-ink">${(order.shippingCents / 100).toFixed(2)}</span>
+            </div>
+          )}
           {order.discountCents ? (
             <div className="mt-2 flex justify-between text-[14.5px]">
               <span className="text-forest">Discount</span>
@@ -84,15 +91,24 @@ export default async function OrderDetailPage({
         </div>
 
         <div className="mt-6 rounded-[3px] border border-line bg-paper p-6">
-          <div className="font-serif text-[20px] text-ink">Shipping to</div>
-          <p className="mt-2 text-[14px] leading-[1.6] text-muted">
-            {order.shippingAddress.name}
-            <br />
-            {order.shippingAddress.street1}
-            {order.shippingAddress.street2 ? `, ${order.shippingAddress.street2}` : ""}
-            <br />
-            {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
-          </p>
+          {order.channel === "local" ? (
+            <>
+              <div className="font-serif text-[20px] text-ink">Pickup</div>
+              <p className="mt-2 text-[14px] leading-[1.6] text-muted">Picked up in person · paid via {order.paymentMethod}.</p>
+            </>
+          ) : (
+            <>
+              <div className="font-serif text-[20px] text-ink">Shipping to</div>
+              <p className="mt-2 text-[14px] leading-[1.6] text-muted">
+                {order.shippingAddress.name}
+                <br />
+                {order.shippingAddress.street1}
+                {order.shippingAddress.street2 ? `, ${order.shippingAddress.street2}` : ""}
+                <br />
+                {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
+              </p>
+            </>
+          )}
           {order.trackingNumber && (
             <div className="mt-4 border-t border-line pt-4">
               <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Tracking number</div>

@@ -18,7 +18,15 @@ export default async function AdminOrdersPage() {
   return (
     <main className="px-6 py-16 md:px-10">
       <div className="mx-auto max-w-[1200px]">
-        <h1 className="font-serif text-[32px] text-ink">Orders</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="font-serif text-[32px] text-ink">Orders</h1>
+          <Link
+            href="/admin/orders/new"
+            className="rounded-[2px] border border-forest px-[16px] py-[10px] text-[13px] font-semibold text-forest transition hover:bg-forest hover:text-paper"
+          >
+            + Record local sale
+          </Link>
+        </div>
 
         {/* Mobile: stacked cards — a fixed-column table can't reflow on a
             narrow screen (email/order-id columns squeeze each other out). */}
@@ -35,7 +43,13 @@ export default async function AdminOrdersPage() {
                   {order.status}
                 </span>
               </div>
-              <div className="mt-1.5 truncate text-[13px] text-muted">{order.userEmail}</div>
+              <div className="mt-1.5 truncate text-[13px] text-muted">
+                {order.channel === "local" ? (
+                  <span className="text-brass">Local — {order.paymentMethod}</span>
+                ) : (
+                  order.userEmail
+                )}
+              </div>
               <div className="mt-2 flex items-center justify-between text-[13px] text-muted">
                 <span>{order.createdAt ? order.createdAt.toLocaleDateString() : ""}</span>
                 <span className="text-ink">${(order.totalCents / 100).toFixed(2)}</span>
@@ -65,7 +79,15 @@ export default async function AdminOrdersPage() {
                       #{order.id.slice(0, 8).toUpperCase()}
                     </Link>
                   </td>
-                  <td className="px-5 py-4 text-muted">{order.userEmail}</td>
+                  <td className="px-5 py-4 text-muted">
+                    {order.channel === "local" ? (
+                      <span>
+                        {order.buyerName} <span className="text-brass">· Local — {order.paymentMethod}</span>
+                      </span>
+                    ) : (
+                      order.userEmail
+                    )}
+                  </td>
                   <td className="px-5 py-4 text-muted">{order.createdAt ? order.createdAt.toLocaleDateString() : ""}</td>
                   <td className="px-5 py-4 text-ink">${(order.totalCents / 100).toFixed(2)}</td>
                   <td className="px-5 py-4">
