@@ -1,7 +1,7 @@
 const audiences = [
   {
-    title: "Home & commercial growers",
-    desc: "Reliable, clean spawn for everyone from a single home tub to commercial fruiting rooms that can't afford a bad flush.",
+    title: "Growers",
+    desc: "Reliable, clean spawn from a single home tub to commercial fruiting rooms that can't afford a bad flush.",
   },
   {
     title: "Researchers & labs",
