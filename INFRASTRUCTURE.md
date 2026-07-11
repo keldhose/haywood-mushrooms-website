@@ -1,6 +1,6 @@
 # Infrastructure & Operations
 
-Reference doc for where this site lives and how its moving parts fit together. Written 2026-07-08.
+Reference doc for where this site lives and how its moving parts fit together. Written 2026-07-08, updated 2026-07-11 — see "Features added since the initial e-commerce build" for everything that's shipped since.
 
 ## Domain & DNS
 
@@ -30,6 +30,7 @@ Current environment variables:
 | `STRIPE_SECRET_KEY` | Stripe API access (test-mode key currently — see E-commerce section) |
 | `STRIPE_WEBHOOK_SECRET` | Verifies incoming Stripe webhook events are genuine |
 | `SHIPPO_API_KEY` | Live shipping rate quotes |
+| `CRON_SECRET` | Shared secret Vercel sends as a bearer token to `/api/cron/release-expired-orders` — the route rejects any request without it, so the cleanup job can't be triggered by an outsider hitting the URL |
 
 `.env.example` in the repo root documents all of these for local development. Never commit `.env.local` (it's gitignored) — paste secrets directly into it, not into chat when working with an AI assistant.
 
@@ -67,7 +68,7 @@ Added 2026-07-08. Three new third-party services, all currently in **test/sandbo
 
 - **Project**: `haywood-mushrooms-45ab5` at console.firebase.google.com (same Google account, `keldhose@gmail.com`) — a *separate* project from the `kraftedlogic` business, deliberately, to keep data/billing isolated.
 - **Authentication**: Email/Password and Google sign-in enabled. Session model: client signs in with the Firebase client SDK → gets an ID token → `POST /api/auth/session` exchanges it for an httpOnly session cookie (`lib/auth/session.ts`, `app/api/auth/session/route.ts`). Protected routes (`/account`, `/admin`, `/checkout`) check this cookie in a `layout.tsx`, not `middleware.ts` (Firebase Admin SDK needs the Node runtime).
-- **Firestore**: Standard edition, `(default)` database. Three collections: `products`, `orders`, and implicitly `users` via Firebase Auth itself (no separate Firestore profile doc yet). No client-side Firestore reads/writes are used anywhere — everything goes through the Admin SDK on the server (`lib/firebase/admin.ts`), so Firestore's default production-mode security rules (deny-all) are fine as-is and have never been touched.
+- **Firestore**: Standard edition, `(default)` database. Collections: `products`, `orders`, `users/{uid}` (saved shipping address only, `lib/users.ts` — profile identity itself still lives in Firebase Auth, not Firestore), `stockNotifications` (back-in-stock waitlist, cleared once notified). No client-side Firestore reads/writes are used anywhere — everything goes through the Admin SDK on the server (`lib/firebase/admin.ts`), so Firestore's default production-mode security rules (deny-all) are fine as-is and have never been touched.
 - **Admin access**: not a role stored anywhere visible — it's a Firebase Auth **custom claim** (`admin: true`) on specific accounts. Manage it with:
   - `npm run admin:grant -- someone@email.com` (they must have already signed up once)
   - `npm run admin:revoke -- someone@email.com`
@@ -78,7 +79,8 @@ Added 2026-07-08. Three new third-party services, all currently in **test/sandbo
 ### Stripe — payments
 
 - **Account**: stripe.com, "Haywood Mushrooms sandbox" — currently using **test-mode** keys (`sk_test_...`). Switching to real payments later means creating live-mode keys in the same Stripe account (Stripe walks you through business verification at that point) and updating `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` in Vercel.
-- **Flow**: `/checkout` collects a shipping address and rate (see Shippo below) → `POST /api/checkout` creates a pending order in Firestore, then a Stripe Checkout Session (hosted payment page) → customer pays → Stripe's **webhook** (`POST /api/webhooks/stripe`, handling `checkout.session.completed`) is the actual source of truth that marks the order paid and decrements product stock — not the success-page redirect, which can't be trusted alone.
+- **Flow**: `/checkout` offers "Ship to me" (collects an address + Shippo rate, see below) or **"Local pickup"** (no address, no shipping cost, skips Shippo entirely) → `POST /api/checkout` creates a pending order in Firestore (reserving stock in the same transaction — see Stock reservation below), then a Stripe Checkout Session (hosted payment page, `allow_promotion_codes: true` so a customer can enter a promo code there) → customer pays → Stripe's **webhook** (`POST /api/webhooks/stripe`, handling `checkout.session.completed`) is the actual source of truth that marks the order paid — not the success-page redirect, which can't be trusted alone. Stock is decremented at reservation time, not at payment time, so it's never oversold to two concurrent checkouts.
+- **No account required** — a guest can check out with just an email. If that email matches an existing account, the order is silently linked to it (shows up in "My orders" if/when they log in). Logged-in customers get their saved address pre-filled and their address saved for next time.
 - **Local webhook testing**: the Stripe CLI is installed (`stripe` command, via winget). `stripe listen --forward-to localhost:<port>/api/webhooks/stripe` forwards test events to your local dev server and prints a `whsec_...` secret to put in `.env.local` as `STRIPE_WEBHOOK_SECRET` — that secret is only valid while `stripe listen` is running, it's not the same as a real deployed webhook endpoint's secret.
 - **Production webhook**: not yet configured. Before going live, add a webhook endpoint in the Stripe dashboard pointed at `https://www.haywoodmushrooms.com/api/webhooks/stripe` (event: `checkout.session.completed`), and put *that* endpoint's signing secret in Vercel's `STRIPE_WEBHOOK_SECRET`.
 - Receipts are Stripe's own automatic emails — no custom invoice/PDF generation in this codebase.
@@ -92,17 +94,36 @@ Added 2026-07-08. Three new third-party services, all currently in **test/sandbo
 
 ### Data model (Firestore)
 
-- **`products/{slug}`** — `name`, `scientificName`, `description`, `priceCents`, `stockQty`, `weightOz`, `imageUrls[]` (photos in display order — first one is the cover/catalog image, reorderable in the admin form via "Set cover"), `active`. Doc ID is a URL slug (e.g. `pink-oyster-grain-spawn-1lb`). Seeded initially via `npm run db:seed` (`scripts/seed-products.ts`) with the real starting catalog; managed going forward via `/admin/products`. Photo uploads go to Firebase Storage (`products/` path in the `haywood-mushrooms-45ab5.firebasestorage.app` bucket) via `POST /api/admin/products/upload` — requires the Firebase project to be on the **Blaze** (pay-as-you-go) plan; Storage isn't available on the free Spark plan.
-- **`orders/{autoId}`** — `userId`, `userEmail`, `items[]` (name/price/qty *snapshot* at purchase time, not a live reference), `subtotalCents`/`shippingCents`/`totalCents`, `shippingAddress`, `shippingRate`, `status` (`pending`→`paid`→`fulfilled`, or `cancelled`), `trackingNumber`, `stripeCheckoutSessionId`/`stripePaymentIntentId`, `createdAt`.
-- Prices/weights/stock are always re-derived server-side from Firestore at checkout time (`lib/products.ts` → `getProductsByIds`) — cart contents from the browser are treated as an (id, qty) wishlist only, never trusted for the actual charge. Same for the shipping rate: the client sends back a Shippo rate ID, and the server re-fetches that rate's authoritative amount from Shippo (`shippo.rates.get`) rather than trusting a client-supplied amount.
+- **`products/{slug}`** — `name`, `scientificName`, `description`, `priceCents`, `stockQty`, `weightOz`, `imageUrls[]` (photos in display order — first one is the cover/catalog image, reorderable in the admin form via "Set cover"), `active`. Doc ID is a URL slug (e.g. `pink-oyster-grain-spawn-1lb`). Two optional add-ons, both configured per product in `/admin/products`:
+  - `variants[]` (`{id, label, priceCents, stockQty, weightOz}`) — purchasable size/form options (e.g. 1lb/5lb/10lb). When present, the product's own base `priceCents`/`stockQty`/`weightOz` are unused (zeroed) — every price/stock read goes through a variant.
+  - `bulkTiers[]` (`{minQty, discountPercent}`) — quantity-break pricing (e.g. "3+, save 10%"), applied per cart line based on how many of that exact product+variant are in the cart. Same schedule applies regardless of which variant is bought.
+  - Seeded initially via `npm run db:seed` (`scripts/seed-products.ts`); managed going forward via `/admin/products`. **Never rerun `db:seed` against real data** — it upserts every field including name/description/images and will silently overwrite real admin edits. Photo uploads go to Firebase Storage (`products/` path in the `haywood-mushrooms-45ab5.firebasestorage.app` bucket) via `POST /api/admin/products/upload` — requires the Firebase project to be on the **Blaze** (pay-as-you-go) plan; Storage isn't available on the free Spark plan.
+- **`orders/{autoId}`** — `userId?`, `userEmail?`, `buyerName?`, `channel` (`"online"` = Stripe checkout, `"local"` = admin-recorded in-person sale), `paymentMethod?` (Cash/Venmo/PayPal/Zelle/Other, local sales only), `items[]` (name/price/qty *snapshot* at purchase time, not a live reference — reflects any bulk discount already applied), `subtotalCents`/`shippingCents`/`totalCents`, `discountCents?` (promo code), `shippingAddress`, `shippingRate` (`provider: "Local pickup"` is the sentinel for both local sales and self-service pickup orders — `shippingCents` is 0 and no real address is collected), `status` (`pending`→`paid`→`fulfilled`, or `cancelled`), `trackingNumber?`, `labelUrl?`/`shippingLabelCostCents?` (admin-purchased shipping label), `readyForPickupAt?`/`pickupInstructions?` (pickup-only — set when an admin notifies the customer it's ready), `expiresAt` (pending orders only — stock reservation deadline), `stripeCheckoutSessionId?`/`stripePaymentIntentId?`, `createdAt`.
+- Prices/weights/stock are always re-derived server-side from Firestore at checkout time (`lib/products.ts` → `getProductsByIds`/`getVariant`, quantity-aware for bulk pricing) — cart contents from the browser are treated as an (id, variantId, qty) wishlist only, never trusted for the actual charge. Same for the shipping rate: the client sends back a Shippo rate ID, and the server re-fetches that rate's authoritative amount from Shippo (`shippo.rates.get`) rather than trusting a client-supplied amount.
+- **Stock reservation**: creating a pending order decrements stock in the same Firestore transaction (`lib/orders.ts` → `createPendingOrder`/`applyStockDelta`), closing the window where two concurrent checkouts could both see "in stock" on the last unit. A pending order that never completes payment releases its stock automatically 30 minutes after creation — checked opportunistically on the next checkout attempt, and swept daily by a cron job (`/api/cron/release-expired-orders`, protected by `CRON_SECRET`; Vercel's Hobby plan only allows daily-granularity cron, not sub-daily).
 
 ### Site map of the e-commerce pages
 
 - `/signup`, `/login` — Firebase email/password + Google auth
-- `/account`, `/account/orders`, `/account/orders/[id]` — customer's own profile + order history
+- `/account`, `/account/orders`, `/account/orders/[id]` — customer's own profile + order history (requires login)
+- `/order/[id]` — public order confirmation/receipt page, reachable by anyone who knows the (unguessable) order id — this is what checkout redirects to on success, so it has to work for guest orders with no account to gate behind
 - `/shop`, `/shop/[slug]` — product catalog (separate from the marketing-only `/strains` page)
-- `/cart`, `/checkout` — client-side cart (React Context + localStorage) → address/shipping/payment
-- `/admin`, `/admin/products` (create/edit is a modal on this page, not separate routes), `/admin/orders`, `/admin/orders/[id]` — admin-only (see Admin access above)
+- `/cart`, `/checkout` — client-side cart (React Context + localStorage) → fulfillment method (ship/pickup) → address/shipping/payment
+- `/admin`, `/admin/products` (create/edit is a modal on this page, not separate routes), `/admin/orders`, `/admin/orders/[id]`, `/admin/orders/new` (record a local cash/Venmo/etc. sale), `/admin/orders/[id]/invoice` (printable/emailable invoice for a local sale) — admin-only (see Admin access above)
+
+### Features added since the initial e-commerce build
+
+- **Product variants** — optional size/form options per product (`variants[]`), each with its own price/stock/weight.
+- **Bulk quantity pricing** — optional per-product discount tiers (`bulkTiers[]`), e.g. "3+, save 10%", applied per cart line.
+- **Back-in-stock notifications** — a customer leaves their email on a sold-out product/variant (`stockNotifications` collection); restocking it (0 → positive stock in `/admin/products`) fires `lib/stock-notify.ts` to email everyone waiting, then clears the list.
+- **One-tap reorder** — a button on any past order re-adds its items to the cart at current prices/stock (skipping anything no longer available), via `/api/products/by-ids`.
+- **Promo codes** — real Stripe coupons/promotion codes, entered at Stripe's hosted checkout (`allow_promotion_codes: true`) or pre-validated in the cart via `/api/promo-code/validate`.
+- **Order lifecycle emails** (`lib/email.ts`, sent via Resend) — order confirmation, admin new-order notification, shipped (with tracking), ready-for-pickup, low-stock alert, and a welcome discount (10% off, tied to newsletter signup via `/api/subscribe`).
+- **Admin: record a local sale** (`/admin/orders/new`) — for growers who pay cash/Venmo/PayPal/Zelle in person. Creates a real `paid` order and decrements stock immediately, no Stripe involved; linked to the buyer's account if their email matches one. Comes with a printable/emailable invoice (`/admin/orders/[id]/invoice`).
+- **Guest checkout** and **local pickup** — see the Stripe section above.
+- **Admin shipping labels** — for shipped (non-pickup) orders, `/admin/orders/[id]` can quote a fresh Shippo rate and purchase a real label, defaulting to whatever service the customer originally paid for.
+- **Installable (PWA)** — `app/manifest.ts` plus generated icon sizes make the site installable to a phone/desktop home screen (Chrome "Install app" / iOS "Add to Home Screen"). No service worker/offline caching — deliberately, since caching pages for a checkout-heavy store risks showing stale prices/stock.
+- **Brand mark** — the site icon (nav, footer, favicon, PWA icons, email header) is `public/haywood-mark.png` and its derivatives, from the `design_handoff_haywood_logo` package — regenerate all sizes from that source if it's ever replaced again (see the git history for the generation script if needed).
 
 ### Deploying this e-commerce layer for the first time — two real gotchas hit on 2026-07-08
 
@@ -123,4 +144,4 @@ Both caused the production build/runtime to fail even though everything worked l
 - **Google sign-in works but logs noisy "Cross-Origin-Opener-Policy" console errors**: known cosmetic Firebase + Chrome popup interaction, not a bug — auth still completes correctly. Only a full fix would be switching from `signInWithPopup` to `signInWithRedirect` in `app/login/page.tsx` / `app/signup/page.tsx`, trading the popup UX for a full-page redirect.
 - **Order stuck on "pending" after a real payment**: the Stripe webhook didn't reach us. In production, check Stripe dashboard → Developers → Webhooks → your endpoint → recent events for delivery failures. Locally, this means `stripe listen` wasn't running during the test.
 - **Checkout fails at the shipping-rate step**: check the address is a real, deliverable US address — Shippo/USPS reject nonsense addresses. Check Shippo dashboard → Logs for the actual carrier error if unsure.
-- **Need to reseed or bulk-edit product data**: edit `scripts/seed-products.ts` and rerun `npm run db:seed` — it upserts by slug, safe to rerun.
+- **Need to bulk-edit product data**: do it through `/admin/products`, or a targeted `.update()` on specific fields. **Do not rerun `npm run db:seed`** against real data — it upserts every field on `scripts/seed-products.ts`'s hardcoded list (including name/description/images), which has silently overwritten real admin edits before. It's only safe against an empty/test database.
