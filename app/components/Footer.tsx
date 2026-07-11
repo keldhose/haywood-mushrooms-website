@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-10 border-b border-white/10 pb-14 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:gap-10">
           <div>
             <div className="flex items-center gap-3">
-              <Image src="/icon.svg" alt="" width={28} height={28} className="flex-none rounded-[6px] ring-1 ring-white/10" />
+              <Image src="/haywood-mark.png" alt="" width={44} height={44} className="flex-none object-contain" />
               <span>
                 <span className="block font-serif text-[23px] leading-none tracking-[0.01em] text-cream">
                   Haywood Mushrooms

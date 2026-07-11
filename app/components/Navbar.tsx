@@ -28,7 +28,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 border-b border-line bg-cream/[.82] backdrop-blur-md">
       <div className="mx-auto flex h-[78px] max-w-[1200px] items-center justify-between px-6 md:px-10">
         <Link href="/" className="flex min-w-0 items-center gap-3">
-          <Image src="/icon.svg" alt="" width={28} height={28} className="flex-none rounded-[6px]" />
+          <Image src="/haywood-mark.png" alt="" width={44} height={44} className="flex-none object-contain" />
           <span className="min-w-0">
             <span className="block truncate font-serif text-[23px] leading-none tracking-[0.01em] text-ink">
               Haywood Mushrooms
