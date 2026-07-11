@@ -132,7 +132,7 @@ function toOrder(id: string, data: FirebaseFirestore.DocumentData): Order {
   };
 }
 
-type StockVariant = { id: string; label: string; priceCents: number; weightOz: number; stockQty: number };
+type StockVariant = { id: string; label: string; priceCents: number; weightOz: number; stockQty: number; preorderPriceCents?: number };
 
 /**
  * Reads each item's product doc (within the given transaction) and applies
@@ -166,12 +166,16 @@ async function applyStockDelta(
       const data = snap.data()!;
       const variants = data.variants as StockVariant[] | undefined;
 
-      const available =
-        item.variantId && Array.isArray(variants)
-          ? variants.find((v) => v.id === item.variantId)?.stockQty ?? 0
-          : ((data.stockQty as number) ?? 0);
+      const matchedVariant = item.variantId && Array.isArray(variants) ? variants.find((v) => v.id === item.variantId) : undefined;
+      const available = matchedVariant ? matchedVariant.stockQty : ((data.stockQty as number) ?? 0);
+      const preorderPriceCents = matchedVariant ? matchedVariant.preorderPriceCents : (data.preorderPriceCents as number | undefined);
 
-      if (available < item.qty) {
+      // A made-to-order purchase (0 stock, a made-to-order price set, and the
+      // product-level "active" flag checked) has no ceiling — it isn't
+      // reserving real inventory, just recording demand.
+      const isPreorderPurchase = available <= 0 && preorderPriceCents != null && data.preorderActive === true;
+
+      if (!isPreorderPurchase && available < item.qty) {
         return { ok: false, item, available };
       }
     }

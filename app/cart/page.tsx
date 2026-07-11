@@ -53,7 +53,7 @@ export default function CartPage() {
                     {item.variantLabel && <span className="text-muted"> — {item.variantLabel}</span>}
                     {item.isPreorder && (
                       <span className="ml-2 rounded-[2px] bg-brass px-[7px] py-[2px] align-middle font-mono text-[9.5px] uppercase tracking-[0.08em] text-forest-deep">
-                        Pre-order
+                        Made to order
                       </span>
                     )}
                   </div>

@@ -97,7 +97,14 @@ function resolveVariant(product: Product, variantId?: string) {
     const found = variantId ? product.variants.find((v) => v.id === variantId) : undefined;
     return found ?? product.variants[0];
   }
-  return { id: undefined, label: undefined, priceCents: product.priceCents, weightOz: product.weightOz, stockQty: product.stockQty };
+  return {
+    id: undefined,
+    label: undefined,
+    priceCents: product.priceCents,
+    weightOz: product.weightOz,
+    stockQty: product.stockQty,
+    preorderPriceCents: product.preorderPriceCents,
+  };
 }
 
 export default function AddToCart({
@@ -111,16 +118,25 @@ export default function AddToCart({
   const { addItem } = useCart();
   const variants = product.variants;
   const hasVariants = Boolean(variants && variants.length > 0);
-  const defaultVariantId = hasVariants ? (variants!.find((v) => v.stockQty > 0) ?? variants![0]).id : undefined;
+  const preorderActive = product.preorderActive === true;
+  const defaultVariantId = hasVariants
+    ? (
+        variants!.find((v) => v.stockQty > 0) ??
+        variants!.find((v) => v.stockQty <= 0 && v.preorderPriceCents != null && preorderActive) ??
+        variants![0]
+      ).id
+    : undefined;
 
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(defaultVariantId);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
 
   const selected = resolveVariant(product, selectedVariantId);
-  const outOfStock = selected.stockQty <= 0;
+  const isPreorder = selected.stockQty <= 0 && selected.preorderPriceCents != null && preorderActive;
+  const outOfStock = selected.stockQty <= 0 && !isPreorder;
+  const unitBasePriceCents = isPreorder ? selected.preorderPriceCents! : selected.priceCents;
   const bulkTiers = product.bulkTiers;
-  const effectivePriceCents = applyBulkDiscount(selected.priceCents, bulkTiers, qty);
+  const effectivePriceCents = applyBulkDiscount(unitBasePriceCents, bulkTiers, qty);
   const activeTier = bestBulkTier(bulkTiers, qty);
   const nextTier = bulkTiers?.find((t) => t.minQty > qty && t.minQty > (activeTier?.minQty ?? 0));
 
@@ -131,12 +147,12 @@ export default function AddToCart({
         variantId: hasVariants ? selected.id : undefined,
         variantLabel: hasVariants ? selected.label : undefined,
         name: product.name,
-        basePriceCents: selected.priceCents,
+        basePriceCents: unitBasePriceCents,
         bulkTiers,
         imageUrl: product.imageUrl,
         weightOz: selected.weightOz,
-        isPreorder: product.isPreorder,
-        preorderEstimate: product.preorderEstimate,
+        isPreorder,
+        preorderEstimate: isPreorder ? product.preorderEstimate : undefined,
       },
       qty
     );
@@ -151,9 +167,9 @@ export default function AddToCart({
 
   return (
     <div>
-      {product.isPreorder && (
+      {isPreorder && (
         <div className="mb-1.5 inline-block rounded-[2px] bg-brass px-[9px] py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-forest-deep">
-          Pre-order
+          Made to order
         </div>
       )}
       <div className="flex items-baseline gap-2">
@@ -162,7 +178,7 @@ export default function AddToCart({
         </div>
         {activeTier && (
           <div className={`font-mono text-muted line-through ${compact ? "text-[12px]" : "text-[15px]"}`}>
-            ${(selected.priceCents / 100).toFixed(2)}
+            ${(unitBasePriceCents / 100).toFixed(2)}
           </div>
         )}
       </div>
@@ -174,14 +190,10 @@ export default function AddToCart({
       {!compact && (
         <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
           {(selected.weightOz / 16).toFixed(1)} lb ·{" "}
-          {selected.stockQty > 0
-            ? product.isPreorder
-              ? `${selected.stockQty} pre-order slots left`
-              : `${selected.stockQty} in stock`
-            : "Out of stock"}
+          {isPreorder ? "Made to order" : selected.stockQty > 0 ? `${selected.stockQty} in stock` : "Out of stock"}
         </div>
       )}
-      {product.isPreorder && product.preorderEstimate && (
+      {isPreorder && product.preorderEstimate && (
         <div className="mt-1.5 text-[12.5px] text-muted">{product.preorderEstimate}</div>
       )}
       {!compact && bulkTiers && bulkTiers.length > 0 && (
@@ -197,7 +209,8 @@ export default function AddToCart({
           {!compact && <div className="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Size</div>}
           <div className="flex flex-wrap gap-2">
             {variants!.map((v) => {
-              const soldOut = v.stockQty <= 0;
+              const vIsPreorder = v.stockQty <= 0 && v.preorderPriceCents != null && preorderActive;
+              const soldOut = v.stockQty <= 0 && !vIsPreorder;
               const isSelected = v.id === selectedVariantId;
               return (
                 <button
@@ -220,7 +233,11 @@ export default function AddToCart({
                   </div>
                   {!compact && (
                     <div className={`mt-[3px] font-mono text-[11px] ${soldOut ? "text-red-700" : "text-muted"}`}>
-                      {soldOut ? "Sold out" : `$${(v.priceCents / 100).toFixed(2)}`}
+                      {soldOut
+                        ? "Sold out"
+                        : vIsPreorder
+                        ? `$${(v.preorderPriceCents! / 100).toFixed(2)} · Made to order`
+                        : `$${(v.priceCents / 100).toFixed(2)}`}
                     </div>
                   )}
                 </button>
@@ -253,7 +270,7 @@ export default function AddToCart({
               onChange={(e) => setQty(Number(e.target.value))}
               className="rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
             >
-              {Array.from({ length: Math.min(selected.stockQty, 10) }, (_, i) => i + 1).map((n) => (
+              {Array.from({ length: isPreorder ? 10 : Math.min(selected.stockQty, 10) }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>
@@ -264,7 +281,7 @@ export default function AddToCart({
               onClick={handleAdd}
               className="flex-1 justify-center rounded-[2px] bg-brass px-[22px] py-[13px] text-[14.5px] font-semibold text-forest-deep transition hover:brightness-[1.06]"
             >
-              {added ? "Added ✓" : product.isPreorder ? "Pre-order" : "Add to cart"}
+              {added ? "Added ✓" : "Add to cart"}
             </button>
           </div>
         )}

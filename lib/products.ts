@@ -9,6 +9,8 @@ export type ProductVariant = {
   priceCents: number;
   weightOz: number;
   stockQty: number;
+  /** Optional — once stockQty hits 0 and the product's preorderActive is true, this variant becomes purchasable again at this price. */
+  preorderPriceCents?: number;
 };
 
 export type Product = {
@@ -19,6 +21,10 @@ export type Product = {
   priceCents: number;
   stockQty: number;
   weightOz: number;
+  /** Base-field equivalent of ProductVariant.preorderPriceCents, for a product with no variants. */
+  preorderPriceCents?: number;
+  /** Single product-level gate — must be true for any variant's (or the base's) made-to-order price to take effect. */
+  preorderActive?: boolean;
   /** All photos, in display order. Always has at least one entry. */
   imageUrls: string[];
   /** First image — convenient for contexts that only show one (cart, catalog cards). */
@@ -28,9 +34,7 @@ export type Product = {
   variants?: ProductVariant[];
   /** Optional quantity-break discounts — same schedule applies to whichever variant is being bought. */
   bulkTiers?: BulkTier[];
-  /** Marks this as a special/limited-batch listing, not ready-to-ship stock. stockQty represents pre-order slots, not on-hand inventory. */
-  isPreorder?: boolean;
-  /** Free-text shipping estimate shown to customers, e.g. "Ships in ~4-6 weeks". Only meaningful when isPreorder is true. */
+  /** Free-text shipping estimate shown whenever anything on this product is being bought as a pre-order, e.g. "Ships in ~4-6 weeks". */
   preorderEstimate?: string;
 };
 
@@ -51,6 +55,7 @@ function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
           priceCents: v.priceCents,
           weightOz: v.weightOz,
           stockQty: v.stockQty,
+          preorderPriceCents: typeof v.preorderPriceCents === "number" ? v.preorderPriceCents : undefined,
         }))
       : undefined;
 
@@ -62,12 +67,13 @@ function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
     priceCents: data.priceCents,
     stockQty: data.stockQty,
     weightOz: data.weightOz,
+    preorderPriceCents: typeof data.preorderPriceCents === "number" ? data.preorderPriceCents : undefined,
+    preorderActive: data.preorderActive === true,
     imageUrls,
     imageUrl: imageUrls[0] ?? "",
     active: data.active !== false,
     variants,
     bulkTiers: Array.isArray(data.bulkTiers) && data.bulkTiers.length > 0 ? data.bulkTiers : undefined,
-    isPreorder: data.isPreorder === true,
     preorderEstimate: data.preorderEstimate || undefined,
   };
 }
@@ -84,13 +90,35 @@ export function getVariant(
   variantId?: string,
   /** When >1 and the product has bulk tiers, priceCents reflects the best qualifying quantity discount. */
   qty: number = 1
-): { id?: string; label?: string; priceCents: number; weightOz: number; stockQty: number } {
+): {
+  id?: string;
+  label?: string;
+  priceCents: number;
+  weightOz: number;
+  stockQty: number;
+  /** True once stockQty is 0, a made-to-order price was set, and it's marked active — priceCents already reflects that price in that case. */
+  isPreorder: boolean;
+  preorderEstimate?: string;
+} {
   const base =
     product.variants && product.variants.length > 0
       ? (variantId ? product.variants.find((v) => v.id === variantId) : undefined) ?? product.variants[0]
-      : { priceCents: product.priceCents, weightOz: product.weightOz, stockQty: product.stockQty };
+      : {
+          priceCents: product.priceCents,
+          weightOz: product.weightOz,
+          stockQty: product.stockQty,
+          preorderPriceCents: product.preorderPriceCents,
+        };
 
-  return { ...base, priceCents: applyBulkDiscount(base.priceCents, product.bulkTiers, qty) };
+  const isPreorder = base.stockQty <= 0 && base.preorderPriceCents != null && product.preorderActive === true;
+  const effectivePriceCents = isPreorder ? base.preorderPriceCents! : base.priceCents;
+
+  return {
+    ...base,
+    priceCents: applyBulkDiscount(effectivePriceCents, product.bulkTiers, qty),
+    isPreorder,
+    preorderEstimate: isPreorder ? product.preorderEstimate : undefined,
+  };
 }
 
 export async function getAllProducts(): Promise<Product[]> {

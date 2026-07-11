@@ -359,7 +359,7 @@ export default function CheckoutForm({
                   <span>
                     {item.name}
                     {item.variantLabel ? ` — ${item.variantLabel}` : ""} × {item.qty}
-                    {item.isPreorder && <span className="ml-1.5 font-mono text-[10px] uppercase text-brass">(Pre-order)</span>}
+                    {item.isPreorder && <span className="ml-1.5 font-mono text-[10px] uppercase text-brass">(Made to order)</span>}
                   </span>
                   <span>${((item.priceCents * item.qty) / 100).toFixed(2)}</span>
                 </div>

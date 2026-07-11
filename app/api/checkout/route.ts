@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "One of the items in your cart is no longer available." }, { status: 400 });
     }
     const variant = getVariant(product, item.variantId, item.qty);
-    if (item.qty > variant.stockQty) {
+    if (!variant.isPreorder && item.qty > variant.stockQty) {
       return NextResponse.json(
         { error: `Only ${variant.stockQty} of "${product.name}" left in stock.` },
         { status: 400 }
@@ -111,8 +111,8 @@ export async function POST(request: Request) {
       name: product.name,
       priceCents: variant.priceCents,
       weightOz: variant.weightOz,
-      isPreorder: product.isPreorder,
-      preorderEstimate: product.preorderEstimate,
+      isPreorder: variant.isPreorder,
+      preorderEstimate: variant.preorderEstimate,
       qty: item.qty,
     });
   }

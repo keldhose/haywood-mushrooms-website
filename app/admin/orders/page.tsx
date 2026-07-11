@@ -53,7 +53,7 @@ export default async function AdminOrdersPage() {
                 ) : (
                   order.userEmail
                 )}
-                {order.items.some((i) => i.isPreorder) && <span className="text-brass"> · Pre-order</span>}
+                {order.items.some((i) => i.isPreorder) && <span className="text-brass"> · Made to order</span>}
               </div>
               <div className="mt-2 flex items-center justify-between text-[13px] text-muted">
                 <span>{order.createdAt ? order.createdAt.toLocaleDateString() : ""}</span>
@@ -96,7 +96,7 @@ export default async function AdminOrdersPage() {
                     ) : (
                       order.userEmail
                     )}
-                    {order.items.some((i) => i.isPreorder) && <span className="text-brass"> · Pre-order</span>}
+                    {order.items.some((i) => i.isPreorder) && <span className="text-brass"> · Made to order</span>}
                   </td>
                   <td className="px-5 py-4 text-muted">{order.createdAt ? order.createdAt.toLocaleDateString() : ""}</td>
                   <td className="px-5 py-4 text-ink">${(order.totalCents / 100).toFixed(2)}</td>

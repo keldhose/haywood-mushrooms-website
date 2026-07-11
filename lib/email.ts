@@ -93,7 +93,7 @@ function preorderNote(order: Order): string {
   <table role="presentation" width="100%" style="background:${COLORS.paper};border:1px dashed ${COLORS.brass};border-radius:4px;border-collapse:collapse;margin-top:24px;">
     <tr>
       <td style="padding:20px;">
-        <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.brass};margin-bottom:8px;">Pre-order</div>
+        <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.brass};margin-bottom:8px;">Made to order</div>
         <div style="font-size:14px;color:${COLORS.ink};line-height:1.6;">${rows}</div>
         <div style="margin-top:10px;font-size:13px;color:${COLORS.muted};line-height:1.5;">${
           mixed ? "The whole order ships together once this is ready." : "We&rsquo;ll email you once it&rsquo;s ready."
@@ -109,7 +109,7 @@ function orderItemsTable(order: Order): string {
       (item) => `
     <tr>
       <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};">
-        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${item.name}${item.variantLabel ? ` &mdash; ${item.variantLabel}` : ""}${item.isPreorder ? ` <span style="font-family:monospace;font-size:10px;text-transform:uppercase;color:${COLORS.brass};">(Pre-order)</span>` : ""}</div>
+        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${item.name}${item.variantLabel ? ` &mdash; ${item.variantLabel}` : ""}${item.isPreorder ? ` <span style="font-family:monospace;font-size:10px;text-transform:uppercase;color:${COLORS.brass};">(Made to order)</span>` : ""}</div>
         <div style="font-family:monospace;font-size:11px;color:${COLORS.muted};margin-top:2px;">Qty ${item.qty}</div>
       </td>
       <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:16px;color:${COLORS.ink};white-space:nowrap;">$${((item.priceCents * item.qty) / 100).toFixed(2)}</td>

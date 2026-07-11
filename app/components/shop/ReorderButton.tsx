@@ -8,7 +8,14 @@ import { useCart } from "@/context/CartContext";
 import type { OrderItem } from "@/lib/orders";
 import type { BulkTier } from "@/lib/pricing";
 
-type RemoteVariant = { id: string; label: string; priceCents: number; weightOz: number; stockQty: number };
+type RemoteVariant = {
+  id: string;
+  label: string;
+  priceCents: number;
+  weightOz: number;
+  stockQty: number;
+  preorderPriceCents?: number;
+};
 type RemoteProduct = {
   id: string;
   name: string;
@@ -16,9 +23,10 @@ type RemoteProduct = {
   priceCents: number;
   weightOz: number;
   stockQty: number;
+  preorderPriceCents?: number;
+  preorderActive?: boolean;
   variants?: RemoteVariant[];
   bulkTiers?: BulkTier[];
-  isPreorder?: boolean;
   preorderEstimate?: string;
 };
 
@@ -54,6 +62,7 @@ export default function ReorderButton({ items }: { items: OrderItem[] }) {
         }
 
         let priceCents = product.priceCents;
+        let preorderPriceCents = product.preorderPriceCents;
         let weightOz = product.weightOz;
         let stockQty = product.stockQty;
         let variantLabel: string | undefined;
@@ -65,12 +74,14 @@ export default function ReorderButton({ items }: { items: OrderItem[] }) {
             continue;
           }
           priceCents = variant.priceCents;
+          preorderPriceCents = variant.preorderPriceCents;
           weightOz = variant.weightOz;
           stockQty = variant.stockQty;
           variantLabel = variant.label;
         }
 
-        if (stockQty <= 0) {
+        const isPreorder = stockQty <= 0 && preorderPriceCents != null && product.preorderActive === true;
+        if (stockQty <= 0 && !isPreorder) {
           skippedCount++;
           continue;
         }
@@ -81,14 +92,15 @@ export default function ReorderButton({ items }: { items: OrderItem[] }) {
             variantId: item.variantId,
             variantLabel,
             name: product.name,
-            basePriceCents: priceCents,
+            basePriceCents: isPreorder ? preorderPriceCents! : priceCents,
             bulkTiers: product.bulkTiers,
             imageUrl: product.imageUrl,
             weightOz,
-            isPreorder: product.isPreorder,
-            preorderEstimate: product.preorderEstimate,
+            isPreorder,
+            preorderEstimate: isPreorder ? product.preorderEstimate : undefined,
           },
-          Math.min(item.qty, stockQty)
+          // Pre-order has no stock ceiling; regular items are still capped by what's actually there.
+          isPreorder ? item.qty : Math.min(item.qty, stockQty)
         );
         addedCount++;
       }

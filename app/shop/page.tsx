@@ -13,11 +13,31 @@ export const metadata = {
 // reflect stock/price changes made later. Revalidate periodically instead.
 export const revalidate = 60;
 
+/** True if any purchasable option on this product currently has real stock. */
+function hasInStockOption(product: Product): boolean {
+  if (product.variants && product.variants.length > 0) {
+    return product.variants.some((v) => v.stockQty > 0);
+  }
+  return product.stockQty > 0;
+}
+
+/** True if "Active for made to order" is checked and at least one option is at 0 stock with an MTO price set. */
+function hasMadeToOrderOption(product: Product): boolean {
+  if (!product.preorderActive) return false;
+  if (product.variants && product.variants.length > 0) {
+    return product.variants.some((v) => v.stockQty <= 0 && v.preorderPriceCents != null);
+  }
+  return product.stockQty <= 0 && product.preorderPriceCents != null;
+}
+
+/** True once every option is at 0 stock and the only way to buy it is made-to-order — belongs in that section exclusively. */
+function isMadeToOrderOnly(product: Product): boolean {
+  return !hasInStockOption(product) && hasMadeToOrderOption(product);
+}
+
 function ProductCard({ product }: { product: Product }) {
-  const soldOut =
-    product.variants && product.variants.length > 0
-      ? product.variants.every((v) => v.stockQty <= 0)
-      : product.stockQty <= 0;
+  const soldOut = !hasInStockOption(product);
+  const madeToOrder = hasMadeToOrderOption(product);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-[3px] border border-line bg-paper">
@@ -29,9 +49,9 @@ function ProductCard({ product }: { product: Product }) {
           sizes="(max-width: 768px) 100vw, 33vw"
           className="object-cover"
         />
-        {product.isPreorder ? (
+        {madeToOrder ? (
           <span className="absolute left-4 top-4 rounded-[2px] bg-brass px-[11px] py-[6px] font-mono text-[10px] uppercase tracking-[0.16em] text-forest-deep">
-            Pre-order
+            Made to order
           </span>
         ) : (
           soldOut && (
@@ -59,8 +79,11 @@ function ProductCard({ product }: { product: Product }) {
 
 export default async function ShopPage() {
   const products = await getAllProducts();
-  const inStockProducts = products.filter((p) => !p.isPreorder);
-  const preorderProducts = products.filter((p) => p.isPreorder);
+  // A product with a mix of in-stock and made-to-order-eligible options
+  // appears in both sections; one that's exclusively made-to-order (every
+  // option at 0 stock) appears only in that section, not "In stock" too.
+  const inStockProducts = products.filter((p) => !isMadeToOrderOnly(p));
+  const preorderProducts = products.filter((p) => hasMadeToOrderOption(p));
 
   return (
     <main>
@@ -99,9 +122,9 @@ export default async function ShopPage() {
 
               {preorderProducts.length > 0 && (
                 <div className={inStockProducts.length > 0 ? "mt-16" : ""}>
-                  <h2 className="font-serif text-[24px] text-ink">Pre-order</h2>
+                  <h2 className="font-serif text-[24px] text-ink">Made to order</h2>
                   <p className="mt-1.5 max-w-[34em] text-[14.5px] text-muted">
-                    Reserve a spot in an upcoming batch — see each listing for the expected ship window.
+                    Made to order — we start growing once you order. See each listing for the expected ship window.
                   </p>
                   <div className="mt-6 grid grid-cols-1 gap-7 md:grid-cols-3">
                     {preorderProducts.map((product) => (

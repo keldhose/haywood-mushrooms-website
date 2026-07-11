@@ -8,6 +8,8 @@ type VariantDraft = {
   id: string;
   label: string;
   price: string;
+  /** Optional — once stock hits 0, this variant becomes purchasable again at this price (gated by the product-level "Active for made to order" checkbox). */
+  preorderPrice: string;
   stockQty: string;
   /** Displayed/entered in pounds; converted to weightOz (the storage unit) on submit. */
   weightLb: string;
@@ -36,6 +38,10 @@ export default function ProductForm({
   const [scientificName, setScientificName] = useState(product?.scientificName ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(product ? (product.priceCents / 100).toFixed(2) : "");
+  const [preorderPrice, setPreorderPrice] = useState(
+    product?.preorderPriceCents !== undefined ? (product.preorderPriceCents / 100).toFixed(2) : ""
+  );
+  const [preorderActive, setPreorderActive] = useState(product?.preorderActive ?? false);
   const [stockQty, setStockQty] = useState(product?.stockQty.toString() ?? "0");
   const [weightLb, setWeightLb] = useState(product ? (product.weightOz / 16).toString() : "");
   const [imageUrls, setImageUrls] = useState<string[]>(product?.imageUrls ?? []);
@@ -45,6 +51,7 @@ export default function ProductForm({
       id: v.id,
       label: v.label,
       price: (v.priceCents / 100).toFixed(2),
+      preorderPrice: v.preorderPriceCents !== undefined ? (v.preorderPriceCents / 100).toFixed(2) : "",
       stockQty: v.stockQty.toString(),
       weightLb: (v.weightOz / 16).toString(),
     }))
@@ -56,7 +63,6 @@ export default function ProductForm({
       discountPercent: t.discountPercent.toString(),
     }))
   );
-  const [isPreorder, setIsPreorder] = useState(product?.isPreorder ?? false);
   const [preorderEstimate, setPreorderEstimate] = useState(product?.preorderEstimate ?? "");
 
   const [saving, setSaving] = useState(false);
@@ -106,7 +112,7 @@ export default function ProductForm({
   function addVariant() {
     setVariants((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), label: "", price: "", stockQty: "0", weightLb: "" },
+      { id: crypto.randomUUID(), label: "", price: "", preorderPrice: "", stockQty: "0", weightLb: "" },
     ]);
   }
 
@@ -157,6 +163,7 @@ export default function ProductForm({
         priceCents: Math.round(parseFloat(v.price) * 100),
         stockQty: parseInt(v.stockQty, 10) || 0,
         weightOz: (parseFloat(v.weightLb) || 0) * 16,
+        ...(v.preorderPrice.trim() ? { preorderPriceCents: Math.round(parseFloat(v.preorderPrice) * 100) } : {}),
       }));
 
     const cleanBulkTiers = bulkTiers
@@ -177,8 +184,9 @@ export default function ProductForm({
       active,
       variants: cleanVariants,
       bulkTiers: cleanBulkTiers,
-      isPreorder,
-      preorderEstimate: isPreorder ? preorderEstimate.trim() : "",
+      ...(!hasVariants && preorderPrice.trim() ? { preorderPriceCents: Math.round(parseFloat(preorderPrice) * 100) } : {}),
+      preorderActive,
+      preorderEstimate: preorderEstimate.trim(),
     };
 
     try {
@@ -270,7 +278,7 @@ export default function ProductForm({
           Price, stock, and weight are set per variant below — this product has {variants.length}.
         </p>
       ) : (
-        <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-4 gap-4">
           <div>
             <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Price ($)</label>
             <input
@@ -280,6 +288,20 @@ export default function ProductForm({
               step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+              className="w-full rounded-[2px] border border-line bg-paper p-[12px] text-[15px] outline-none focus:border-forest"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
+              <span title="Made to Order">MTO Price ($)</span> <span className="normal-case text-muted/70">(optional)</span>
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="—"
+              value={preorderPrice}
+              onChange={(e) => setPreorderPrice(e.target.value)}
               className="w-full rounded-[2px] border border-line bg-paper p-[12px] text-[15px] outline-none focus:border-forest"
             />
           </div>
@@ -385,7 +407,7 @@ export default function ProductForm({
         {variants.length > 0 && (
           <div className="mt-3 flex flex-col gap-3">
             {variants.map((v) => (
-              <div key={v.id} className="grid grid-cols-[1.4fr_0.9fr_0.8fr_0.8fr_auto] items-end gap-2 rounded-[2px] border border-line bg-paper p-3">
+              <div key={v.id} className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.7fr_0.7fr_auto] items-end gap-2 rounded-[2px] border border-line bg-paper p-3">
                 <div>
                   <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Label</label>
                   <input
@@ -406,6 +428,20 @@ export default function ProductForm({
                     step="0.01"
                     value={v.price}
                     onChange={(e) => updateVariant(v.id, { price: e.target.value })}
+                    className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">
+                    <span title="Made to Order">MTO Price ($)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="—"
+                    value={v.preorderPrice}
+                    onChange={(e) => updateVariant(v.id, { preorderPrice: e.target.value })}
                     className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
                   />
                 </div>
@@ -510,29 +546,25 @@ export default function ProductForm({
       </div>
 
       <div className="mt-6 rounded-[2px] border border-line bg-paper p-4">
-        <label className="flex items-center gap-2.5 text-[14px] text-ink">
-          <input type="checkbox" checked={isPreorder} onChange={(e) => setIsPreorder(e.target.checked)} />
-          This is a pre-order (special/limited batch)
+        <label className="block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
+          Made to order shipping estimate <span className="normal-case text-muted/70">(optional)</span>
         </label>
-        <p className="mt-1.5 pl-[26px] text-[12.5px] text-muted">
-          {hasVariants ? "Variant stock" : "Stock qty"} above represents pre-order slots, not ready-to-ship inventory.
-          Shown as &ldquo;Pre-order&rdquo; in the shop instead of &ldquo;In stock.&rdquo;
+        <p className="mt-1.5 text-[12.5px] text-muted">
+          Prices entered in an &ldquo;MTO Price ($)&rdquo; field above only take effect once &ldquo;Active for made
+          to order&rdquo; below is checked and that size&rsquo;s stock hits 0 — it then buys exactly like an in-stock
+          item, just at this price.
         </p>
-
-        {isPreorder && (
-          <div className="mt-3 pl-[26px]">
-            <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
-              Shipping estimate
-            </label>
-            <input
-              type="text"
-              placeholder="Ships in ~4-6 weeks"
-              value={preorderEstimate}
-              onChange={(e) => setPreorderEstimate(e.target.value)}
-              className="w-full max-w-[320px] rounded-[2px] border border-line bg-cream p-[10px] text-[13.5px] outline-none focus:border-forest"
-            />
-          </div>
-        )}
+        <input
+          type="text"
+          placeholder="Ships in ~4-6 weeks"
+          value={preorderEstimate}
+          onChange={(e) => setPreorderEstimate(e.target.value)}
+          className="mt-3 w-full max-w-[320px] rounded-[2px] border border-line bg-cream p-[10px] text-[13.5px] outline-none focus:border-forest"
+        />
+        <label className="mt-3 flex items-center gap-2.5 text-[14px] text-ink">
+          <input type="checkbox" checked={preorderActive} onChange={(e) => setPreorderActive(e.target.checked)} />
+          Active for made to order
+        </label>
       </div>
 
       <label className="mt-6 flex items-center gap-2.5 text-[14px] text-ink">

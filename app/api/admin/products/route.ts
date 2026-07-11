@@ -22,7 +22,9 @@ function validateVariants(input: unknown): ProductVariant[] | null {
       typeof v.label !== "string" || !v.label.trim() ||
       typeof v.priceCents !== "number" || !Number.isFinite(v.priceCents) || v.priceCents < 0 ||
       typeof v.stockQty !== "number" || !Number.isFinite(v.stockQty) || v.stockQty < 0 ||
-      typeof v.weightOz !== "number" || !Number.isFinite(v.weightOz) || v.weightOz <= 0
+      typeof v.weightOz !== "number" || !Number.isFinite(v.weightOz) || v.weightOz <= 0 ||
+      (v.preorderPriceCents !== undefined &&
+        (typeof v.preorderPriceCents !== "number" || !Number.isFinite(v.preorderPriceCents) || v.preorderPriceCents < 0))
     ) {
       return null;
     }
@@ -32,6 +34,7 @@ function validateVariants(input: unknown): ProductVariant[] | null {
       priceCents: Math.round(v.priceCents),
       stockQty: Math.round(v.stockQty),
       weightOz: v.weightOz,
+      ...(typeof v.preorderPriceCents === "number" ? { preorderPriceCents: Math.round(v.preorderPriceCents) } : {}),
     });
   }
   return clean;
@@ -66,7 +69,8 @@ export function validateProductPayload(body: unknown) {
     active,
     variants,
     bulkTiers,
-    isPreorder,
+    preorderPriceCents,
+    preorderActive,
     preorderEstimate,
   } = (body ?? {}) as Record<string, unknown>;
 
@@ -87,6 +91,10 @@ export function validateProductPayload(body: unknown) {
       typeof stockQty === "number" && Number.isFinite(stockQty) && stockQty >= 0 &&
       typeof weightOz === "number" && Number.isFinite(weightOz) && weightOz > 0;
 
+  const preorderPriceValid =
+    preorderPriceCents === undefined ||
+    (typeof preorderPriceCents === "number" && Number.isFinite(preorderPriceCents) && preorderPriceCents >= 0);
+
   if (
     typeof name !== "string" || !name.trim() ||
     typeof scientificName !== "string" || !scientificName.trim() ||
@@ -94,7 +102,8 @@ export function validateProductPayload(body: unknown) {
     cleanImageUrls.length === 0 ||
     cleanVariants === null ||
     cleanBulkTiers === null ||
-    !baseNumbersValid
+    !baseNumbersValid ||
+    !preorderPriceValid
   ) {
     return null;
   }
@@ -110,7 +119,8 @@ export function validateProductPayload(body: unknown) {
     imageUrls: cleanImageUrls,
     active: active !== false,
     variants: cleanVariants,
-    isPreorder: isPreorder === true,
+    preorderPriceCents: hasVariants || typeof preorderPriceCents !== "number" ? undefined : Math.round(preorderPriceCents),
+    preorderActive: preorderActive === true,
     preorderEstimate: typeof preorderEstimate === "string" ? preorderEstimate.trim() : "",
   };
 }
@@ -141,12 +151,13 @@ export async function POST(request: Request) {
     slug = `${baseSlug}-${suffix}`;
   }
 
-  const { variants, bulkTiers, preorderEstimate, ...rest } = product;
+  const { variants, bulkTiers, preorderEstimate, preorderPriceCents, ...rest } = product;
   const docData = {
     ...rest,
     ...(variants.length > 0 ? { variants } : {}),
     ...(bulkTiers.length > 0 ? { bulkTiers } : {}),
     ...(preorderEstimate ? { preorderEstimate } : {}),
+    ...(preorderPriceCents !== undefined ? { preorderPriceCents } : {}),
   };
   await adminDb.collection("products").doc(slug).set(docData);
 
