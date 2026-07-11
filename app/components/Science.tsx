@@ -20,6 +20,10 @@ const checklist = [
     title: "Multi-stage contamination screening",
     desc: "Cultures held and inspected before they're cleared for growers.",
   },
+  {
+    title: "Premium sorghum grain substrate",
+    desc: "Round, uniform milo kernels for even colonization and low clump risk.",
+  },
 ];
 
 export default function Science() {
