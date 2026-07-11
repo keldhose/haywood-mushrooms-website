@@ -32,8 +32,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // An empty variants array means "no variants" — clear the field rather
   // than writing an empty array, so getAllProducts' back-compat check
   // (`variants?.length > 0`) sees a genuinely non-variant product.
-  const { variants, ...rest } = product;
-  const updateData = variants.length > 0 ? { ...rest, variants } : { ...rest, variants: FieldValue.delete() };
+  const { variants, bulkTiers, ...rest } = product;
+  const updateData = {
+    ...rest,
+    variants: variants.length > 0 ? variants : FieldValue.delete(),
+    bulkTiers: bulkTiers.length > 0 ? bulkTiers : FieldValue.delete(),
+  };
   await docRef.update(updateData);
 
   // Anything that went from 0 stock to >0 stock in this edit should notify

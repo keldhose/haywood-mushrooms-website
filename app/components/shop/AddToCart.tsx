@@ -6,6 +6,7 @@ import { useCart } from "@/context/CartContext";
 // Type-only: importing anything runtime from "@/lib/products" here would
 // pull the server-only firebase-admin module graph into the client bundle.
 import type { Product } from "@/lib/products";
+import { applyBulkDiscount, bestBulkTier } from "@/lib/pricing";
 
 function BackInStockForm({
   productId,
@@ -118,6 +119,10 @@ export default function AddToCart({
 
   const selected = resolveVariant(product, selectedVariantId);
   const outOfStock = selected.stockQty <= 0;
+  const bulkTiers = product.bulkTiers;
+  const effectivePriceCents = applyBulkDiscount(selected.priceCents, bulkTiers, qty);
+  const activeTier = bestBulkTier(bulkTiers, qty);
+  const nextTier = bulkTiers?.find((t) => t.minQty > qty && t.minQty > (activeTier?.minQty ?? 0));
 
   function handleAdd() {
     addItem(
@@ -126,7 +131,8 @@ export default function AddToCart({
         variantId: hasVariants ? selected.id : undefined,
         variantLabel: hasVariants ? selected.label : undefined,
         name: product.name,
-        priceCents: selected.priceCents,
+        basePriceCents: selected.priceCents,
+        bulkTiers,
         imageUrl: product.imageUrl,
         weightOz: selected.weightOz,
       },
@@ -143,13 +149,32 @@ export default function AddToCart({
 
   return (
     <div>
-      <div className={compact ? "font-serif text-[22px] text-ink" : "font-serif text-[32px] text-ink"}>
-        ${(selected.priceCents / 100).toFixed(2)}
+      <div className="flex items-baseline gap-2">
+        <div className={compact ? "font-serif text-[22px] text-ink" : "font-serif text-[32px] text-ink"}>
+          ${(effectivePriceCents / 100).toFixed(2)}
+        </div>
+        {activeTier && (
+          <div className={`font-mono text-muted line-through ${compact ? "text-[12px]" : "text-[15px]"}`}>
+            ${(selected.priceCents / 100).toFixed(2)}
+          </div>
+        )}
       </div>
+      {activeTier && (
+        <div className={`mt-1 font-mono uppercase tracking-[0.08em] text-forest ${compact ? "text-[10px]" : "text-[11px]"}`}>
+          {activeTier.discountPercent}% bulk discount applied
+        </div>
+      )}
       {!compact && (
         <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
           {(selected.weightOz / 16).toFixed(1)} lb ·{" "}
           {selected.stockQty > 0 ? `${selected.stockQty} in stock` : "Out of stock"}
+        </div>
+      )}
+      {!compact && bulkTiers && bulkTiers.length > 0 && (
+        <div className="mt-3 rounded-[2px] border border-dashed border-brass/50 bg-cream px-3 py-2.5 font-mono text-[11px] text-muted">
+          {nextTier
+            ? `Buy ${nextTier.minQty}+, save ${nextTier.discountPercent}%`
+            : bulkTiers.map((t) => `${t.minQty}+ save ${t.discountPercent}%`).join(" · ")}
         </div>
       )}
 

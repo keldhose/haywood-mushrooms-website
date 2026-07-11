@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     if (!product) {
       return NextResponse.json({ error: "One of the items in your cart is no longer available." }, { status: 400 });
     }
-    const variant = getVariant(product, item.variantId);
+    const variant = getVariant(product, item.variantId, item.qty);
     if (item.qty > variant.stockQty) {
       return NextResponse.json(
         { error: `Only ${variant.stockQty} of "${product.name}" left in stock.` },

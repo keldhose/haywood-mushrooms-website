@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     if (!product) {
       return NextResponse.json({ error: "One of the selected products is no longer available." }, { status: 400 });
     }
-    const variant = getVariant(product, item.variantId);
+    const variant = getVariant(product, item.variantId, item.qty);
     orderItems.push({
       productId: product.id,
       variantId: variant.id || undefined,

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { bestBulkTier } from "@/lib/pricing";
 
 export default function CartPage() {
   const { items, updateQty, removeItem, subtotalCents } = useCart();
@@ -53,6 +54,11 @@ export default function CartPage() {
                   </div>
                   <div className="mt-1 font-mono text-[13px] text-muted">
                     ${(item.priceCents / 100).toFixed(2)} each
+                    {bestBulkTier(item.bulkTiers, item.qty) && (
+                      <span className="ml-1.5 text-forest">
+                        · {bestBulkTier(item.bulkTiers, item.qty)!.discountPercent}% bulk discount
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { applyBulkDiscount, type BulkTier } from "@/lib/pricing";
 
 export type CartItem = {
   productId: string;
@@ -14,9 +15,13 @@ export type CartItem = {
   variantId?: string;
   variantLabel?: string;
   name: string;
+  /** Undiscounted per-unit price. */
+  basePriceCents: number;
+  /** Effective per-unit price at this item's current qty — kept in sync with qty by addItem/updateQty, reflecting any bulk-quantity discount. */
   priceCents: number;
   imageUrl: string;
   weightOz: number;
+  bulkTiers?: BulkTier[];
   qty: number;
 };
 
@@ -26,9 +31,13 @@ function sameLine(a: CartLineKey, b: CartLineKey): boolean {
   return a.productId === b.productId && (a.variantId ?? "") === (b.variantId ?? "");
 }
 
+function effectivePriceCents(basePriceCents: number, bulkTiers: BulkTier[] | undefined, qty: number): number {
+  return applyBulkDiscount(basePriceCents, bulkTiers, qty);
+}
+
 type CartContextValue = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "qty">, qty?: number) => void;
+  addItem: (item: Omit<CartItem, "qty" | "priceCents">, qty?: number) => void;
   updateQty: (productId: string, variantId: string | undefined, qty: number) => void;
   removeItem: (productId: string, variantId?: string) => void;
   clear: () => void;
@@ -47,7 +56,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        setItems(JSON.parse(stored));
+        const parsed = JSON.parse(stored) as Array<Record<string, unknown>>;
+        // Back-compat: carts saved before bulk pricing only had `priceCents`
+        // (no basePriceCents) — treat that as the undiscounted base price.
+        const migrated: CartItem[] = parsed.map((raw) => {
+          const basePriceCents = (raw.basePriceCents as number | undefined) ?? (raw.priceCents as number | undefined) ?? 0;
+          const bulkTiers = raw.bulkTiers as BulkTier[] | undefined;
+          const qty = (raw.qty as number | undefined) ?? 1;
+          return {
+            productId: raw.productId as string,
+            variantId: raw.variantId as string | undefined,
+            variantLabel: raw.variantLabel as string | undefined,
+            name: raw.name as string,
+            imageUrl: raw.imageUrl as string,
+            weightOz: raw.weightOz as number,
+            basePriceCents,
+            bulkTiers,
+            qty,
+            priceCents: effectivePriceCents(basePriceCents, bulkTiers, qty),
+          };
+        });
+        setItems(migrated);
       }
     } catch {
       // ignore corrupt/inaccessible storage
@@ -61,13 +90,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, hydrated]);
 
-  function addItem(item: Omit<CartItem, "qty">, qty = 1) {
+  function addItem(item: Omit<CartItem, "qty" | "priceCents">, qty = 1) {
     setItems((prev) => {
       const existing = prev.find((i) => sameLine(i, item));
       if (existing) {
-        return prev.map((i) => (sameLine(i, item) ? { ...i, qty: i.qty + qty } : i));
+        const newQty = existing.qty + qty;
+        return prev.map((i) =>
+          sameLine(i, item)
+            ? { ...i, ...item, qty: newQty, priceCents: effectivePriceCents(item.basePriceCents, item.bulkTiers, newQty) }
+            : i
+        );
       }
-      return [...prev, { ...item, qty }];
+      return [...prev, { ...item, qty, priceCents: effectivePriceCents(item.basePriceCents, item.bulkTiers, qty) }];
     });
   }
 
@@ -76,7 +110,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem(productId, variantId);
       return;
     }
-    setItems((prev) => prev.map((i) => (sameLine(i, { productId, variantId }) ? { ...i, qty } : i)));
+    setItems((prev) =>
+      prev.map((i) =>
+        sameLine(i, { productId, variantId })
+          ? { ...i, qty, priceCents: effectivePriceCents(i.basePriceCents, i.bulkTiers, qty) }
+          : i
+      )
+    );
   }
 
   function removeItem(productId: string, variantId?: string) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import type { ProductVariant } from "@/lib/products";
+import type { BulkTier } from "@/lib/pricing";
 
 function slugify(name: string): string {
   return name
@@ -36,8 +37,25 @@ function validateVariants(input: unknown): ProductVariant[] | null {
   return clean;
 }
 
+function validateBulkTiers(input: unknown): BulkTier[] | null {
+  if (!Array.isArray(input)) return [];
+
+  const clean: BulkTier[] = [];
+  for (const raw of input) {
+    const t = (raw ?? {}) as Record<string, unknown>;
+    if (
+      typeof t.minQty !== "number" || !Number.isFinite(t.minQty) || t.minQty < 2 || !Number.isInteger(t.minQty) ||
+      typeof t.discountPercent !== "number" || !Number.isFinite(t.discountPercent) || t.discountPercent <= 0 || t.discountPercent >= 100
+    ) {
+      return null;
+    }
+    clean.push({ minQty: t.minQty, discountPercent: t.discountPercent });
+  }
+  return clean.sort((a, b) => a.minQty - b.minQty);
+}
+
 export function validateProductPayload(body: unknown) {
-  const { name, scientificName, description, priceCents, stockQty, weightOz, imageUrls, active, variants } =
+  const { name, scientificName, description, priceCents, stockQty, weightOz, imageUrls, active, variants, bulkTiers } =
     (body ?? {}) as Record<string, unknown>;
 
   const cleanImageUrls = Array.isArray(imageUrls)
@@ -45,6 +63,7 @@ export function validateProductPayload(body: unknown) {
     : [];
 
   const cleanVariants = validateVariants(variants);
+  const cleanBulkTiers = validateBulkTiers(bulkTiers);
   // Base price/stock/weight are only meaningful — and required — for a
   // product with no variants. A variant product is priced/stocked/weighed
   // per variant; the base fields are unused everywhere they'd be read.
@@ -62,6 +81,7 @@ export function validateProductPayload(body: unknown) {
     typeof description !== "string" || !description.trim() ||
     cleanImageUrls.length === 0 ||
     cleanVariants === null ||
+    cleanBulkTiers === null ||
     !baseNumbersValid
   ) {
     return null;
@@ -71,6 +91,7 @@ export function validateProductPayload(body: unknown) {
     name: name.trim(),
     scientificName: scientificName.trim(),
     description: description.trim(),
+    bulkTiers: cleanBulkTiers,
     priceCents: hasVariants ? 0 : Math.round(priceCents as number),
     stockQty: hasVariants ? 0 : Math.round(stockQty as number),
     weightOz: hasVariants ? 0 : (weightOz as number),
@@ -106,8 +127,12 @@ export async function POST(request: Request) {
     slug = `${baseSlug}-${suffix}`;
   }
 
-  const { variants, ...rest } = product;
-  const docData = variants.length > 0 ? { ...rest, variants } : rest;
+  const { variants, bulkTiers, ...rest } = product;
+  const docData = {
+    ...rest,
+    ...(variants.length > 0 ? { variants } : {}),
+    ...(bulkTiers.length > 0 ? { bulkTiers } : {}),
+  };
   await adminDb.collection("products").doc(slug).set(docData);
 
   return NextResponse.json({ id: slug });

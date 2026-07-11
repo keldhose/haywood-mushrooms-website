@@ -1,5 +1,6 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase/admin";
+import { applyBulkDiscount, type BulkTier } from "@/lib/pricing";
 
 /** One purchasable option on a product (e.g. a 1/5/10 lb size, or grain/agar/LC form). */
 export type ProductVariant = {
@@ -25,6 +26,8 @@ export type Product = {
   active: boolean;
   /** Optional purchasable options. When absent, the product itself is the single implicit variant. */
   variants?: ProductVariant[];
+  /** Optional quantity-break discounts — same schedule applies to whichever variant is being bought. */
+  bulkTiers?: BulkTier[];
 };
 
 function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
@@ -59,6 +62,7 @@ function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
     imageUrl: imageUrls[0] ?? "",
     active: data.active !== false,
     variants,
+    bulkTiers: Array.isArray(data.bulkTiers) && data.bulkTiers.length > 0 ? data.bulkTiers : undefined,
   };
 }
 
@@ -71,13 +75,16 @@ function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
  */
 export function getVariant(
   product: Product,
-  variantId?: string
+  variantId?: string,
+  /** When >1 and the product has bulk tiers, priceCents reflects the best qualifying quantity discount. */
+  qty: number = 1
 ): { id?: string; label?: string; priceCents: number; weightOz: number; stockQty: number } {
-  if (product.variants && product.variants.length > 0) {
-    const found = variantId ? product.variants.find((v) => v.id === variantId) : undefined;
-    return found ?? product.variants[0];
-  }
-  return { priceCents: product.priceCents, weightOz: product.weightOz, stockQty: product.stockQty };
+  const base =
+    product.variants && product.variants.length > 0
+      ? (variantId ? product.variants.find((v) => v.id === variantId) : undefined) ?? product.variants[0]
+      : { priceCents: product.priceCents, weightOz: product.weightOz, stockQty: product.stockQty };
+
+  return { ...base, priceCents: applyBulkDiscount(base.priceCents, product.bulkTiers, qty) };
 }
 
 export async function getAllProducts(): Promise<Product[]> {

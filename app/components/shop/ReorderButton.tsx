@@ -6,6 +6,7 @@ import { useCart } from "@/context/CartContext";
 // Type-only: importing anything runtime from "@/lib/orders" here would pull
 // the server-only firebase-admin module graph into the client bundle.
 import type { OrderItem } from "@/lib/orders";
+import type { BulkTier } from "@/lib/pricing";
 
 type RemoteVariant = { id: string; label: string; priceCents: number; weightOz: number; stockQty: number };
 type RemoteProduct = {
@@ -16,6 +17,7 @@ type RemoteProduct = {
   weightOz: number;
   stockQty: number;
   variants?: RemoteVariant[];
+  bulkTiers?: BulkTier[];
 };
 
 export default function ReorderButton({ items }: { items: OrderItem[] }) {
@@ -77,7 +79,8 @@ export default function ReorderButton({ items }: { items: OrderItem[] }) {
             variantId: item.variantId,
             variantLabel,
             name: product.name,
-            priceCents,
+            basePriceCents: priceCents,
+            bulkTiers: product.bulkTiers,
             imageUrl: product.imageUrl,
             weightOz,
           },

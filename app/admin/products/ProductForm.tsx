@@ -13,6 +13,12 @@ type VariantDraft = {
   weightLb: string;
 };
 
+type BulkTierDraft = {
+  key: string;
+  minQty: string;
+  discountPercent: string;
+};
+
 export default function ProductForm({
   product,
   onSaved,
@@ -41,6 +47,13 @@ export default function ProductForm({
       price: (v.priceCents / 100).toFixed(2),
       stockQty: v.stockQty.toString(),
       weightLb: (v.weightOz / 16).toString(),
+    }))
+  );
+  const [bulkTiers, setBulkTiers] = useState<BulkTierDraft[]>(
+    (product?.bulkTiers ?? []).map((t) => ({
+      key: crypto.randomUUID(),
+      minQty: t.minQty.toString(),
+      discountPercent: t.discountPercent.toString(),
     }))
   );
 
@@ -103,6 +116,18 @@ export default function ProductForm({
     setVariants((prev) => prev.filter((v) => v.id !== id));
   }
 
+  function addBulkTier() {
+    setBulkTiers((prev) => [...prev, { key: crypto.randomUUID(), minQty: "", discountPercent: "" }]);
+  }
+
+  function updateBulkTier(key: string, patch: Partial<BulkTierDraft>) {
+    setBulkTiers((prev) => prev.map((t) => (t.key === key ? { ...t, ...patch } : t)));
+  }
+
+  function removeBulkTier(key: string) {
+    setBulkTiers((prev) => prev.filter((t) => t.key !== key));
+  }
+
   function handleSetCover(url: string) {
     setImageUrls((prev) => [url, ...prev.filter((u) => u !== url)]);
   }
@@ -132,6 +157,13 @@ export default function ProductForm({
         weightOz: (parseFloat(v.weightLb) || 0) * 16,
       }));
 
+    const cleanBulkTiers = bulkTiers
+      .filter((t) => t.minQty.trim() && t.discountPercent.trim())
+      .map((t) => ({
+        minQty: parseInt(t.minQty, 10),
+        discountPercent: parseFloat(t.discountPercent),
+      }));
+
     const payload = {
       name,
       scientificName,
@@ -142,6 +174,7 @@ export default function ProductForm({
       imageUrls,
       active,
       variants: cleanVariants,
+      bulkTiers: cleanBulkTiers,
     };
 
     try {
@@ -400,6 +433,68 @@ export default function ProductForm({
                   type="button"
                   onClick={() => removeVariant(v.id)}
                   aria-label={`Remove variant ${v.label || ""}`}
+                  className="mb-0.5 h-fit font-mono text-[11px] text-muted hover:text-red-700"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <label className="block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
+            Bulk pricing <span className="normal-case text-muted/70">(optional — e.g. buy 3+, save 10%)</span>
+          </label>
+          <button
+            type="button"
+            onClick={addBulkTier}
+            className="font-mono text-[11px] uppercase tracking-[0.1em] text-forest hover:text-brass"
+          >
+            + Add tier
+          </button>
+        </div>
+        <p className="mt-1.5 text-[12px] text-muted">
+          Applies to whichever size/variant is bought, based on how many of that same item are in the cart.
+        </p>
+
+        {bulkTiers.length > 0 && (
+          <div className="mt-3 flex flex-col gap-3">
+            {bulkTiers.map((t) => (
+              <div key={t.key} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 rounded-[2px] border border-line bg-paper p-3">
+                <div>
+                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Min qty</label>
+                  <input
+                    type="number"
+                    required
+                    min="2"
+                    step="1"
+                    placeholder="3"
+                    value={t.minQty}
+                    onChange={(e) => updateBulkTier(t.key, { minQty: e.target.value })}
+                    className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">Discount (%)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="99"
+                    step="1"
+                    placeholder="10"
+                    value={t.discountPercent}
+                    onChange={(e) => updateBulkTier(t.key, { discountPercent: e.target.value })}
+                    className="w-full rounded-[2px] border border-line bg-cream p-2 text-[13.5px] outline-none focus:border-forest"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeBulkTier(t.key)}
+                  aria-label="Remove tier"
                   className="mb-0.5 h-fit font-mono text-[11px] text-muted hover:text-red-700"
                 >
                   ×
