@@ -71,7 +71,7 @@ const products: SeedProduct[] = [
     name: "Premium Grey Oyster Mushroom Grain Spawn (Fully Colonized)",
     scientificName: "Pleurotus ostreatus",
     description:
-      "Fully colonized grain spawn, made to order. Aggressive, forgiving, and the dependable base for any production room. Available in three sizes.",
+      "Fully colonized grain spawn, ready to ship. Aggressive, forgiving, and the dependable base for any production room. Available in three sizes.",
     // Base fields mirror the 5 lb variant — only used as a display fallback
     // if a caller ever reads the product without going through a variant.
     priceCents: 2650,

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth/session";
 import { getOrderById } from "@/lib/orders";
+import { PICKUP_ADDRESS } from "@/lib/business-address";
 import ReorderButton from "../../../components/shop/ReorderButton";
 
 export default async function OrderDetailPage({
@@ -69,6 +70,7 @@ export default async function OrderDetailPage({
                 <span>
                   {item.name}
                   {item.variantLabel ? ` — ${item.variantLabel}` : ""} × {item.qty}
+                  {item.isPreorder && <span className="ml-1.5 font-mono text-[10px] uppercase text-brass">(Pre-order)</span>}
                 </span>
                 <span>${((item.priceCents * item.qty) / 100).toFixed(2)}</span>
               </div>
@@ -108,6 +110,11 @@ export default async function OrderDetailPage({
             <>
               <div className="font-serif text-[20px] text-ink">Pickup</div>
               <p className="mt-2 text-[14px] leading-[1.6] text-muted">
+                {PICKUP_ADDRESS.street1}
+                <br />
+                {PICKUP_ADDRESS.city}, {PICKUP_ADDRESS.state} {PICKUP_ADDRESS.zip}
+              </p>
+              <p className="mt-3 border-t border-line pt-3 text-[14px] leading-[1.6] text-muted">
                 {order.readyForPickupAt
                   ? order.pickupInstructions
                   : "We'll email you as soon as it's ready to collect."}

@@ -1,17 +1,13 @@
 import "server-only";
 import { Shippo } from "shippo";
+import { PICKUP_ADDRESS } from "@/lib/business-address";
 
 export const shippo = new Shippo({
   apiKeyHeader: process.env.SHIPPO_API_KEY!,
 });
 
 export const SHIP_FROM_ADDRESS = {
-  name: "Haywood Mushrooms",
-  street1: "3121 Sentinel Ferry Ln",
-  city: "Cary",
-  state: "NC",
-  zip: "27519",
-  country: "US",
+  ...PICKUP_ADDRESS,
   email: "info@haywoodmushrooms.com",
   phone: "984-284-0795",
 };

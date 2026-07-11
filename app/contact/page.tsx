@@ -9,7 +9,7 @@ export const metadata = {
 const faqs = [
   {
     q: "Are you shipping spawn yet?",
-    a: "We're scaling production in Moncure and taking pre-orders now. Send an inquiry and we'll tell you exactly what's available and when.",
+    a: "Yes — current strains are in stock and ship now from our shop. For bulk or custom quantities beyond what's listed, send an inquiry and we'll tell you exactly what's available and when.",
   },
   {
     q: "What forms do cultures come in?",
@@ -35,7 +35,7 @@ const faqs = [
   },
   {
     q: "Where are you located?",
-    a: "Research and culture development in Cary, NC; spawn production and cultivation expanding in Moncure, NC.",
+    a: "Research, culture development, and spawn production based in Cary, NC.",
   },
 ];
 
@@ -64,13 +64,6 @@ export default function ContactPage() {
               <span className="min-w-0 break-words text-[16px] text-cream">
                 Cary, North Carolina
                 <span className="mt-[3px] block text-[13px] text-cream/55">Sterile culture development &amp; strain selection</span>
-              </span>
-            </div>
-            <div className="flex gap-4 border-t border-white/10 py-5" style={{ alignItems: "baseline" }}>
-              <span className="w-[130px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Production</span>
-              <span className="min-w-0 break-words text-[16px] text-cream">
-                Moncure, North Carolina
-                <span className="mt-[3px] block text-[13px] text-cream/55">Spawn production &amp; gourmet cultivation</span>
               </span>
             </div>
             <div className="flex gap-4 border-y border-white/10 py-5" style={{ alignItems: "baseline" }}>

@@ -17,7 +17,7 @@ const stats = [
   {
     label: "Based in",
     value: "North Carolina",
-    detail: "Cary research lab · Moncure production facility",
+    detail: "Cary research lab",
   },
 ];
 

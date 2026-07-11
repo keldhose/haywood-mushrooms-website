@@ -30,7 +30,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           <div className="flex items-start justify-between border-b border-line pb-6">
             <div>
               <div className="font-serif text-[24px] text-ink">Haywood Mushrooms</div>
-              <div className="mt-1 text-[13px] text-muted">Cary &amp; Moncure, NC · info@haywoodmushrooms.com</div>
+              <div className="mt-1 text-[13px] text-muted">info@haywoodmushrooms.com</div>
             </div>
             <div className="text-right">
               <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-brass">Invoice #{invoiceId}</div>

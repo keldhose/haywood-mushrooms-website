@@ -54,7 +54,7 @@ export default function LeadCapture() {
               Tell us what you&apos;re growing.
             </h2>
             <p className="mt-[22px] max-w-[26em] text-[17px] leading-[1.6] text-cream/70">
-              We&apos;re scaling production in Moncure and taking early inquiries now. Send a note about your operation and we&apos;ll follow up with availability, timelines, and pricing.
+              We&apos;re scaling production and taking early inquiries now. Send a note about your operation and we&apos;ll follow up with availability, timelines, and pricing.
             </p>
 
             <div className="mt-10 flex flex-col gap-0">
@@ -65,10 +65,6 @@ export default function LeadCapture() {
               <div className="mt-[14px] flex gap-3.5" style={{ alignItems: "baseline" }}>
                 <span className="w-[120px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Research lab</span>
                 <span className="min-w-0 break-words text-[16px] text-cream">Cary, North Carolina</span>
-              </div>
-              <div className="mt-[14px] flex gap-3.5" style={{ alignItems: "baseline" }}>
-                <span className="w-[120px] flex-none font-mono text-[11px] uppercase tracking-[0.14em] text-brass">Production</span>
-                <span className="min-w-0 break-words text-[16px] text-cream">Moncure, North Carolina</span>
               </div>
             </div>
           </div>

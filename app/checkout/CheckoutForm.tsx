@@ -207,7 +207,7 @@ export default function CheckoutForm({
                   }`}
                 >
                   <div className="text-[15px] font-medium text-ink">Local pickup</div>
-                  <div className="mt-1 text-[13px] text-muted">Free — pick up in person once it&apos;s ready.</div>
+                  <div className="mt-1 text-[13px] text-muted">Free — Cary, NC. Exact address shown after checkout.</div>
                 </button>
               </div>
             </div>
@@ -359,6 +359,7 @@ export default function CheckoutForm({
                   <span>
                     {item.name}
                     {item.variantLabel ? ` — ${item.variantLabel}` : ""} × {item.qty}
+                    {item.isPreorder && <span className="ml-1.5 font-mono text-[10px] uppercase text-brass">(Pre-order)</span>}
                   </span>
                   <span>${((item.priceCents * item.qty) / 100).toFixed(2)}</span>
                 </div>

@@ -8,6 +8,11 @@ import StrainsPreview from "./components/StrainsPreview";
 import Audience from "./components/Audience";
 import LeadCapture from "./components/LeadCapture";
 
+// Hero reads product photos via the Admin SDK, which isn't tracked by
+// Next's fetch cache — without this the homepage would be baked statically
+// at build time and never reflect a cover-photo change made later.
+export const revalidate = 60;
+
 export default function Home() {
   return (
     <main>

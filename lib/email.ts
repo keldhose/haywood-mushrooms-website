@@ -1,6 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
 import type { Order, LowStockCrossing } from "@/lib/orders";
+import { PICKUP_ADDRESS } from "@/lib/business-address";
 
 const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL ?? "Haywood Mushrooms <onboarding@resend.dev>";
 const REPLY_TO = "info@haywoodmushrooms.com";
@@ -63,7 +64,7 @@ export function emailShell(headBar: string, body: string): string {
     </tr>
     <tr>
       <td style="background:${COLORS.ink};padding:26px 40px;text-align:center;">
-        <div style="font-family:monospace;font-size:10px;letter-spacing:0.1em;color:rgba(245,244,240,0.5);">Haywood Mushrooms &middot; Cary &amp; Moncure, NC &middot; info@haywoodmushrooms.com</div>
+        <div style="font-family:monospace;font-size:10px;letter-spacing:0.1em;color:rgba(245,244,240,0.5);">Haywood Mushrooms &middot; info@haywoodmushrooms.com</div>
       </td>
     </tr>
   </table>
@@ -74,13 +75,41 @@ function isPickupOrder(order: Order): boolean {
   return order.shippingRate.provider === "Local pickup";
 }
 
+/** A dashed brass note box listing any pre-order items and their ship estimates, or "" if the order has none. */
+function preorderNote(order: Order): string {
+  const preorderItems = order.items.filter((i) => i.isPreorder);
+  if (preorderItems.length === 0) return "";
+
+  const rows = preorderItems
+    .map(
+      (i) =>
+        `${i.name}${i.variantLabel ? ` &mdash; ${i.variantLabel}` : ""}${i.preorderEstimate ? ` (${i.preorderEstimate})` : ""}`
+    )
+    .join("<br>");
+
+  const mixed = order.items.length > preorderItems.length;
+
+  return `
+  <table role="presentation" width="100%" style="background:${COLORS.paper};border:1px dashed ${COLORS.brass};border-radius:4px;border-collapse:collapse;margin-top:24px;">
+    <tr>
+      <td style="padding:20px;">
+        <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.brass};margin-bottom:8px;">Pre-order</div>
+        <div style="font-size:14px;color:${COLORS.ink};line-height:1.6;">${rows}</div>
+        <div style="margin-top:10px;font-size:13px;color:${COLORS.muted};line-height:1.5;">${
+          mixed ? "The whole order ships together once this is ready." : "We&rsquo;ll email you once it&rsquo;s ready."
+        }</div>
+      </td>
+    </tr>
+  </table>`;
+}
+
 function orderItemsTable(order: Order): string {
   const rows = order.items
     .map(
       (item) => `
     <tr>
       <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};">
-        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${item.name}${item.variantLabel ? ` &mdash; ${item.variantLabel}` : ""}</div>
+        <div style="font-size:14px;font-weight:600;color:${COLORS.ink};">${item.name}${item.variantLabel ? ` &mdash; ${item.variantLabel}` : ""}${item.isPreorder ? ` <span style="font-family:monospace;font-size:10px;text-transform:uppercase;color:${COLORS.brass};">(Pre-order)</span>` : ""}</div>
         <div style="font-family:monospace;font-size:11px;color:${COLORS.muted};margin-top:2px;">Qty ${item.qty}</div>
       </td>
       <td style="padding:16px 20px;border-bottom:1px solid ${COLORS.line};text-align:right;font-family:Georgia,serif;font-size:16px;color:${COLORS.ink};white-space:nowrap;">$${((item.priceCents * item.qty) / 100).toFixed(2)}</td>
@@ -125,7 +154,11 @@ function shippingBlock(order: Order): string {
     <tr>
       <td style="padding:20px;">
         <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:8px;">Pickup</div>
-        <div style="font-size:14px;color:${COLORS.ink};line-height:1.5;">${order.shippingAddress.name} &mdash; we&rsquo;ll email you when it&rsquo;s ready to collect.</div>
+        <div style="font-size:14px;color:${COLORS.ink};line-height:1.5;">
+          ${PICKUP_ADDRESS.street1}<br>
+          ${PICKUP_ADDRESS.city}, ${PICKUP_ADDRESS.state} ${PICKUP_ADDRESS.zip}
+        </div>
+        <div style="margin-top:10px;font-size:13px;color:${COLORS.muted};line-height:1.5;">We&rsquo;ll email you when it&rsquo;s ready to collect.</div>
       </td>
     </tr>
   </table>`;
@@ -156,10 +189,17 @@ export function brassButton(label: string, href: string): string {
 
 export function buildOrderConfirmationHtml(order: Order): string {
   const id = shortId(order);
+  const hasPreorder = order.items.some((i) => i.isPreorder);
+  const headline = hasPreorder ? "Thank you &mdash; your order is confirmed." : "Thank you &mdash; your spawn is on its way.";
+  const intro = hasPreorder
+    ? `Hi ${firstName(order)}, we've received your order and payment. Part of it is a pre-order &mdash; see below for the expected timeline. We'll send a shipping note with tracking once everything&rsquo;s packed and ready.`
+    : `Hi ${firstName(order)}, we've received your order and payment. It's being prepared for shipment &mdash; you'll get a shipping note with tracking the moment it's on the way.`;
+
   const body = `
     <div style="font-family:monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${COLORS.brass};">Order confirmed &middot; #${id}</div>
-    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">Thank you &mdash; your spawn is on the way to being made.</div>
-    <p style="font-size:15px;color:${COLORS.muted};margin-top:14px;line-height:1.6;">Hi ${firstName(order)}, we've received your order and payment. It's now in our production queue; you'll get a shipping note with tracking the moment it's on the way.</p>
+    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">${headline}</div>
+    <p style="font-size:15px;color:${COLORS.muted};margin-top:14px;line-height:1.6;">${intro}</p>
+    ${preorderNote(order)}
     ${orderItemsTable(order)}
     ${shippingBlock(order)}
     ${brassButton("View your order", `${BASE_URL}/account/orders/${order.id}`)}
@@ -205,6 +245,7 @@ export function buildAdminOrderNotificationHtml(order: Order): string {
         </td>
       </tr>
     </table>
+    ${preorderNote(order)}
     ${orderItemsTable(order)}
     ${shippingBlock(order)}
     ${brassButton("View order in admin", `${BASE_URL}/admin/orders/${order.id}`)}
@@ -452,6 +493,8 @@ export function buildReadyForPickupHtml(order: Order): string {
         <td style="padding:20px;">
           <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:8px;">Pickup window</div>
           <div style="font-size:14.5px;color:${COLORS.ink};line-height:1.6;">${order.pickupInstructions || "Contact us to arrange a time."}</div>
+          <div style="margin-top:14px;border-top:1px solid ${COLORS.line};padding-top:14px;font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:8px;">Address</div>
+          <div style="font-size:14.5px;color:${COLORS.ink};line-height:1.6;">${PICKUP_ADDRESS.street1}, ${PICKUP_ADDRESS.city}, ${PICKUP_ADDRESS.state} ${PICKUP_ADDRESS.zip}</div>
         </td>
       </tr>
     </table>

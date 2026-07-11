@@ -2,12 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { getAllProducts } from "@/lib/products";
 
-type HeroPhoto = { imageUrl: string; name: string; scientificName: string };
+type HeroPhoto = { imageUrl: string; name: string };
 
 const FALLBACK_PHOTO: HeroPhoto = {
   imageUrl: "/pink-oyster.png",
   name: "Pink oyster mushroom cluster grown at Haywood Mushrooms",
-  scientificName: "Pleurotus djamor",
 };
 
 type Slot = { top: string; left: string; width: string; height: string; rotate: string; z: number };
@@ -48,7 +47,7 @@ export default async function Hero() {
   const photos: HeroPhoto[] = products
     .filter((p) => p.imageUrl)
     .slice(0, MAX_PHOTOS)
-    .map((p) => ({ imageUrl: p.imageUrl, name: p.name, scientificName: p.scientificName }));
+    .map((p) => ({ imageUrl: p.imageUrl, name: p.name }));
 
   if (photos.length === 0) {
     photos.push(FALLBACK_PHOTO);
@@ -112,11 +111,6 @@ export default async function Hero() {
                 sizes="(max-width: 768px) 50vw, 25vw"
                 className="object-cover"
               />
-              {i === 0 && (
-                <div className="absolute bottom-2 left-2 right-2 rounded-[2px] bg-[rgba(20,20,18,0.5)] px-[10px] py-[6px] font-mono text-[10px] text-white/90 backdrop-blur-md">
-                  {photo.scientificName} — {photo.name}
-                </div>
-              )}
             </div>
           );
         })}
