@@ -30,14 +30,19 @@ function hasMadeToOrderOption(product: Product): boolean {
   return product.stockQty <= 0 && product.preorderPriceCents != null;
 }
 
-/** True once every option is at 0 stock and the only way to buy it is made-to-order — belongs in that section exclusively. */
-function isMadeToOrderOnly(product: Product): boolean {
-  return !hasInStockOption(product) && hasMadeToOrderOption(product);
-}
-
-function ProductCard({ product }: { product: Product }) {
-  const soldOut = !hasInStockOption(product);
-  const madeToOrder = hasMadeToOrderOption(product);
+// No per-card "Made to order" badge here — the section heading already says
+// so for every card underneath it; repeating it on each card is redundant.
+// "Sold out" only applies when there's truly nothing purchasable, made-to-order included.
+function ProductCard({
+  product,
+  preferMadeToOrder = false,
+  enableMadeToOrder = true,
+}: {
+  product: Product;
+  preferMadeToOrder?: boolean;
+  enableMadeToOrder?: boolean;
+}) {
+  const soldOut = !hasInStockOption(product) && !(enableMadeToOrder && hasMadeToOrderOption(product));
 
   return (
     <div className="flex flex-col overflow-hidden rounded-[3px] border border-line bg-paper">
@@ -49,16 +54,10 @@ function ProductCard({ product }: { product: Product }) {
           sizes="(max-width: 768px) 100vw, 33vw"
           className="object-cover"
         />
-        {madeToOrder ? (
-          <span className="absolute left-4 top-4 rounded-[2px] bg-brass px-[11px] py-[6px] font-mono text-[10px] uppercase tracking-[0.16em] text-forest-deep">
-            Made to order
+        {soldOut && (
+          <span className="absolute left-4 top-4 rounded-[2px] border border-red-300 bg-red-50/95 px-[11px] py-[6px] font-mono text-[10px] uppercase tracking-[0.16em] text-red-700">
+            Sold out
           </span>
-        ) : (
-          soldOut && (
-            <span className="absolute left-4 top-4 rounded-[2px] border border-red-300 bg-red-50/95 px-[11px] py-[6px] font-mono text-[10px] uppercase tracking-[0.16em] text-red-700">
-              Sold out
-            </span>
-          )
         )}
       </Link>
 
@@ -70,7 +69,13 @@ function ProductCard({ product }: { product: Product }) {
         <p className="mt-4 flex-1 text-[14.5px] leading-[1.5] text-muted">{product.description}</p>
 
         <div className="mt-5">
-          <AddToCart product={product} compact />
+          <AddToCart
+            product={product}
+            compact
+            showPreorderBadge={false}
+            preferMadeToOrder={preferMadeToOrder}
+            enableMadeToOrder={enableMadeToOrder}
+          />
         </div>
       </div>
     </div>
@@ -79,11 +84,11 @@ function ProductCard({ product }: { product: Product }) {
 
 export default async function ShopPage() {
   const products = await getAllProducts();
-  // A product with a mix of in-stock and made-to-order-eligible options
-  // appears in both sections; one that's exclusively made-to-order (every
-  // option at 0 stock) appears only in that section, not "In stock" too.
-  const inStockProducts = products.filter((p) => !isMadeToOrderOnly(p));
-  const preorderProducts = products.filter((p) => hasMadeToOrderOption(p));
+  // Section membership is purely checkbox-driven: every active product is
+  // listed under "Products," and every product with "Active for made to
+  // order" checked is also listed under "Made to order" — regardless of its
+  // current stock level. A specific option with 0 qty just shows as such.
+  const madeToOrderProducts = products.filter((p) => p.preorderActive === true);
 
   return (
     <main>
@@ -107,28 +112,26 @@ export default async function ShopPage() {
             <p className="text-muted">No products are available right now — check back soon.</p>
           ) : (
             <>
-              {inStockProducts.length > 0 && (
-                <div>
-                  {preorderProducts.length > 0 && (
-                    <h2 className="font-serif text-[24px] text-ink">In stock</h2>
-                  )}
-                  <div className={`grid grid-cols-1 gap-7 md:grid-cols-3 ${preorderProducts.length > 0 ? "mt-6" : ""}`}>
-                    {inStockProducts.map((product) => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
+              <div>
+                {madeToOrderProducts.length > 0 && (
+                  <h2 className="font-serif text-[24px] text-ink">Products</h2>
+                )}
+                <div className={`grid grid-cols-1 gap-7 md:grid-cols-3 ${madeToOrderProducts.length > 0 ? "mt-6" : ""}`}>
+                  {products.map((product) => (
+                    <ProductCard key={product.id} product={product} enableMadeToOrder={false} />
+                  ))}
                 </div>
-              )}
+              </div>
 
-              {preorderProducts.length > 0 && (
-                <div className={inStockProducts.length > 0 ? "mt-16" : ""}>
+              {madeToOrderProducts.length > 0 && (
+                <div className="mt-16">
                   <h2 className="font-serif text-[24px] text-ink">Made to order</h2>
                   <p className="mt-1.5 max-w-[34em] text-[14.5px] text-muted">
                     Made to order — we start growing once you order. See each listing for the expected ship window.
                   </p>
                   <div className="mt-6 grid grid-cols-1 gap-7 md:grid-cols-3">
-                    {preorderProducts.map((product) => (
-                      <ProductCard key={product.id} product={product} />
+                    {madeToOrderProducts.map((product) => (
+                      <ProductCard key={product.id} product={product} preferMadeToOrder />
                     ))}
                   </div>
                 </div>

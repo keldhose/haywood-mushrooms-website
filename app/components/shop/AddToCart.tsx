@@ -110,20 +110,31 @@ function resolveVariant(product: Product, variantId?: string) {
 export default function AddToCart({
   product,
   compact = false,
+  showPreorderBadge = true,
+  preferMadeToOrder = false,
+  enableMadeToOrder = true,
 }: {
   product: Product;
   /** Catalog-card usage: smaller price, no weight/stock line, tighter variant chips. Still fully interactive — price updates with the selected variant. */
   compact?: boolean;
+  /** Set false when this card is shown in a context (e.g. the general "Products" grid) that already makes made-to-order status clear elsewhere. */
+  showPreorderBadge?: boolean;
+  /** Set true in a "Made to order" listing so the default selection/price shown is a made-to-order option, not whichever variant happens to be in stock. */
+  preferMadeToOrder?: boolean;
+  /** Set false in a plain "Products" listing so a fully sold-out product shows as out of stock there, instead of silently falling back to its made-to-order price. */
+  enableMadeToOrder?: boolean;
 }) {
   const { addItem } = useCart();
   const variants = product.variants;
   const hasVariants = Boolean(variants && variants.length > 0);
-  const preorderActive = product.preorderActive === true;
+  const preorderActive = enableMadeToOrder && product.preorderActive === true;
+  const isMtoEligible = (v: NonNullable<typeof variants>[number]) =>
+    v.stockQty <= 0 && v.preorderPriceCents != null && preorderActive;
   const defaultVariantId = hasVariants
     ? (
-        variants!.find((v) => v.stockQty > 0) ??
-        variants!.find((v) => v.stockQty <= 0 && v.preorderPriceCents != null && preorderActive) ??
-        variants![0]
+        preferMadeToOrder
+          ? variants!.find(isMtoEligible) ?? variants!.find((v) => v.stockQty > 0) ?? variants![0]
+          : variants!.find((v) => v.stockQty > 0) ?? variants!.find(isMtoEligible) ?? variants![0]
       ).id
     : undefined;
 
@@ -167,7 +178,7 @@ export default function AddToCart({
 
   return (
     <div>
-      {isPreorder && (
+      {isPreorder && showPreorderBadge && (
         <div className="mb-1.5 inline-block rounded-[2px] bg-brass px-[9px] py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-forest-deep">
           Made to order
         </div>
