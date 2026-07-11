@@ -25,6 +25,7 @@ export default function CheckoutForm({
   const router = useRouter();
   const { items, subtotalCents } = useCart();
 
+  const [fulfillment, setFulfillment] = useState<"ship" | "pickup">("ship");
   const [email, setEmail] = useState(userEmail ?? "");
   const [name, setName] = useState(savedAddress?.name ?? "");
   const [street1, setStreet1] = useState(savedAddress?.street1 ?? "");
@@ -108,7 +109,11 @@ export default function CheckoutForm({
   }
 
   async function handlePay() {
-    if (!selectedRateId || !shipmentId) return;
+    if (fulfillment === "ship" && (!selectedRateId || !shipmentId)) return;
+    if (fulfillment === "pickup" && !name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
     if (!userEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Please enter a valid email.");
       return;
@@ -122,10 +127,10 @@ export default function CheckoutForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: items.map((i) => ({ productId: i.productId, variantId: i.variantId, qty: i.qty })),
-          address: { name, street1, street2, city, state, zip },
+          address: fulfillment === "pickup" ? { name } : { name, street1, street2, city, state, zip },
           email,
-          rateId: selectedRateId,
-          shipmentId,
+          fulfillmentMethod: fulfillment,
+          ...(fulfillment === "ship" ? { rateId: selectedRateId, shipmentId } : {}),
         }),
       });
 
@@ -146,7 +151,9 @@ export default function CheckoutForm({
   }
 
   const selectedRate = rates?.find((r) => r.id === selectedRateId) ?? null;
-  const totalCents = subtotalCents + (selectedRate?.amountCents ?? 0);
+  const shippingCents = fulfillment === "pickup" ? 0 : selectedRate?.amountCents ?? 0;
+  const totalCents = subtotalCents + shippingCents;
+  const canPay = fulfillment === "pickup" ? name.trim().length > 0 : Boolean(selectedRate);
 
   return (
     <main className="px-6 py-16 md:px-10">
@@ -179,123 +186,168 @@ export default function CheckoutForm({
               </>
             )}
 
-            <form onSubmit={handleGetRates} className="mt-8">
-              <div className="font-serif text-[22px] text-ink">Shipping address</div>
-              <p className="mt-1.5 text-[13px] text-muted">
-                Currently shipping within the United States only.
-                {savedAddress && " Pre-filled from your last order — update it if this one's different."}
-              </p>
-
-              <div className="mt-5">
-                <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Full name</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
-                />
+            <div className="mt-8">
+              <div className="font-serif text-[22px] text-ink">How do you want it?</div>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFulfillment("ship")}
+                  className={`rounded-[2px] border p-4 text-left transition ${
+                    fulfillment === "ship" ? "border-forest bg-paper" : "border-line hover:border-forest/50"
+                  }`}
+                >
+                  <div className="text-[15px] font-medium text-ink">Ship to me</div>
+                  <div className="mt-1 text-[13px] text-muted">Carrier rates calculated below.</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFulfillment("pickup")}
+                  className={`rounded-[2px] border p-4 text-left transition ${
+                    fulfillment === "pickup" ? "border-forest bg-paper" : "border-line hover:border-forest/50"
+                  }`}
+                >
+                  <div className="text-[15px] font-medium text-ink">Local pickup</div>
+                  <div className="mt-1 text-[13px] text-muted">Free — pick up in person once it&apos;s ready.</div>
+                </button>
               </div>
+            </div>
 
-              <div className="mt-4">
-                <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Street address</label>
-                <input
-                  type="text"
-                  required
-                  value={street1}
-                  onChange={(e) => setStreet1(e.target.value)}
-                  className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
-                />
-              </div>
-
-              <div className="mt-4">
-                <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
-                  Apt / suite <span className="normal-case text-muted/70">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={street2}
-                  onChange={(e) => setStreet2(e.target.value)}
-                  className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
-                />
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-4">
-                <div className="col-span-1">
-                  <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">City</label>
-                  <input
-                    type="text"
-                    required
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">State</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={2}
-                    placeholder="NC"
-                    value={state}
-                    onChange={(e) => setState(e.target.value.toUpperCase())}
-                    className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] uppercase outline-none focus:border-forest"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">ZIP</label>
-                  <input
-                    type="text"
-                    required
-                    value={zip}
-                    onChange={(e) => setZip(e.target.value)}
-                    className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loadingRates}
-                className="mt-6 rounded-[2px] border border-forest px-[22px] py-[13px] text-[14.5px] font-semibold text-forest transition hover:bg-forest hover:text-paper disabled:opacity-60"
-              >
-                {loadingRates ? "Calculating…" : rates ? "Recalculate shipping" : "Calculate shipping"}
-              </button>
-            </form>
-
-            {rates && (
+            {fulfillment === "pickup" ? (
               <div className="mt-8">
-                <div className="font-serif text-[22px] text-ink">Shipping options</div>
-                <div className="mt-4 flex flex-col gap-3">
-                  {rates.map((rate) => (
-                    <label
-                      key={rate.id}
-                      className={`flex cursor-pointer items-center justify-between rounded-[2px] border p-4 transition ${
-                        selectedRateId === rate.id ? "border-forest bg-paper" : "border-line"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="rate"
-                          checked={selectedRateId === rate.id}
-                          onChange={() => setSelectedRateId(rate.id)}
-                        />
-                        <div>
-                          <div className="text-[15px] font-medium text-ink">
-                            {rate.provider} — {rate.service}
-                          </div>
-                          {rate.estimatedDays && (
-                            <div className="text-[13px] text-muted">~{rate.estimatedDays} business days</div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="font-serif text-[18px] text-ink">${(rate.amountCents / 100).toFixed(2)}</div>
-                    </label>
-                  ))}
+                <div className="font-serif text-[22px] text-ink">Your name</div>
+                <p className="mt-1.5 text-[13px] text-muted">So we know who&apos;s picking up. We&apos;ll email you when it&apos;s ready.</p>
+                <div className="mt-5">
+                  <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Full name</label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full max-w-[400px] rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
+                  />
                 </div>
               </div>
+            ) : (
+              <>
+                <form onSubmit={handleGetRates} className="mt-8">
+                  <div className="font-serif text-[22px] text-ink">Shipping address</div>
+                  <p className="mt-1.5 text-[13px] text-muted">
+                    Currently shipping within the United States only.
+                    {savedAddress && " Pre-filled from your last order — update it if this one's different."}
+                  </p>
+
+                  <div className="mt-5">
+                    <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Full name</label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Street address</label>
+                    <input
+                      type="text"
+                      required
+                      value={street1}
+                      onChange={(e) => setStreet1(e.target.value)}
+                      className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
+                      Apt / suite <span className="normal-case text-muted/70">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={street2}
+                      onChange={(e) => setStreet2(e.target.value)}
+                      className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
+                    />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-4">
+                    <div className="col-span-1">
+                      <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">City</label>
+                      <input
+                        type="text"
+                        required
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">State</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={2}
+                        placeholder="NC"
+                        value={state}
+                        onChange={(e) => setState(e.target.value.toUpperCase())}
+                        className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] uppercase outline-none focus:border-forest"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">ZIP</label>
+                      <input
+                        type="text"
+                        required
+                        value={zip}
+                        onChange={(e) => setZip(e.target.value)}
+                        className="w-full rounded-[2px] border border-line bg-paper p-[13px] text-[15px] outline-none focus:border-forest"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loadingRates}
+                    className="mt-6 rounded-[2px] border border-forest px-[22px] py-[13px] text-[14.5px] font-semibold text-forest transition hover:bg-forest hover:text-paper disabled:opacity-60"
+                  >
+                    {loadingRates ? "Calculating…" : rates ? "Recalculate shipping" : "Calculate shipping"}
+                  </button>
+                </form>
+
+                {rates && (
+                  <div className="mt-8">
+                    <div className="font-serif text-[22px] text-ink">Shipping options</div>
+                    <div className="mt-4 flex flex-col gap-3">
+                      {rates.map((rate) => (
+                        <label
+                          key={rate.id}
+                          className={`flex cursor-pointer items-center justify-between rounded-[2px] border p-4 transition ${
+                            selectedRateId === rate.id ? "border-forest bg-paper" : "border-line"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name="rate"
+                              checked={selectedRateId === rate.id}
+                              onChange={() => setSelectedRateId(rate.id)}
+                            />
+                            <div>
+                              <div className="text-[15px] font-medium text-ink">
+                                {rate.provider} — {rate.service}
+                              </div>
+                              {rate.estimatedDays && (
+                                <div className="text-[13px] text-muted">~{rate.estimatedDays} business days</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="font-serif text-[18px] text-ink">${(rate.amountCents / 100).toFixed(2)}</div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -319,7 +371,9 @@ export default function CheckoutForm({
             </div>
             <div className="mt-2 flex justify-between text-[14.5px]">
               <span className="text-muted">Shipping</span>
-              <span className="text-ink">{selectedRate ? `$${(selectedRate.amountCents / 100).toFixed(2)}` : "—"}</span>
+              <span className="text-ink">
+                {fulfillment === "pickup" ? "Free" : selectedRate ? `$${(selectedRate.amountCents / 100).toFixed(2)}` : "—"}
+              </span>
             </div>
 
             {promoApplied ? (
@@ -363,7 +417,7 @@ export default function CheckoutForm({
             <button
               type="button"
               onClick={handlePay}
-              disabled={!selectedRate || payingNow || (!userEmail && !email.trim())}
+              disabled={!canPay || payingNow || (!userEmail && !email.trim())}
               className="mt-5 w-full justify-center rounded-[2px] bg-brass py-[13px] text-[14.5px] font-semibold text-forest-deep transition hover:brightness-[1.06] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {payingNow ? "Redirecting to payment…" : "Pay now"}

@@ -70,6 +70,10 @@ export function emailShell(headBar: string, body: string): string {
 </div>`;
 }
 
+function isPickupOrder(order: Order): boolean {
+  return order.shippingRate.provider === "Local pickup";
+}
+
 function orderItemsTable(order: Order): string {
   const rows = order.items
     .map(
@@ -91,10 +95,14 @@ function orderItemsTable(order: Order): string {
       <td style="padding:12px 20px;font-size:13.5px;color:${COLORS.muted};">Subtotal</td>
       <td style="padding:12px 20px;text-align:right;font-size:13.5px;color:${COLORS.muted};">$${(order.subtotalCents / 100).toFixed(2)}</td>
     </tr>
-    <tr>
+    ${
+      order.shippingCents > 0
+        ? `<tr>
       <td style="padding:0 20px 12px;font-size:13.5px;color:${COLORS.muted};">Shipping &mdash; ${order.shippingRate.provider} ${order.shippingRate.service}</td>
       <td style="padding:0 20px 12px;text-align:right;font-size:13.5px;color:${COLORS.muted};">$${(order.shippingCents / 100).toFixed(2)}</td>
-    </tr>
+    </tr>`
+        : ""
+    }
     ${
       order.discountCents
         ? `<tr>
@@ -111,6 +119,18 @@ function orderItemsTable(order: Order): string {
 }
 
 function shippingBlock(order: Order): string {
+  if (isPickupOrder(order)) {
+    return `
+  <table role="presentation" width="100%" style="background:${COLORS.paper};border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:24px;">
+    <tr>
+      <td style="padding:20px;">
+        <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:8px;">Pickup</div>
+        <div style="font-size:14px;color:${COLORS.ink};line-height:1.5;">${order.shippingAddress.name} &mdash; we&rsquo;ll email you when it&rsquo;s ready to collect.</div>
+      </td>
+    </tr>
+  </table>`;
+  }
+
   const addr = order.shippingAddress;
   return `
   <table role="presentation" width="100%" style="background:${COLORS.paper};border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:24px;">
@@ -418,5 +438,50 @@ export async function sendShippedEmail(order: Order): Promise<void> {
     }
   } catch (err) {
     console.error("Unexpected error sending shipped email:", err);
+  }
+}
+
+export function buildReadyForPickupHtml(order: Order): string {
+  const id = shortId(order);
+  const body = `
+    <div style="font-family:monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${COLORS.brass};">Ready for pickup &middot; #${id}</div>
+    <div style="font-family:Georgia,serif;font-size:30px;color:${COLORS.ink};margin-top:12px;">Your order is ready.</div>
+    <p style="font-size:15px;color:${COLORS.muted};margin-top:14px;line-height:1.6;">Hi ${firstName(order)}, your spawn is packed and ready to pick up.</p>
+    <table role="presentation" width="100%" style="background:${COLORS.paper};border:1px solid ${COLORS.line};border-radius:4px;border-collapse:collapse;margin-top:24px;">
+      <tr>
+        <td style="padding:20px;">
+          <div style="font-family:monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.muted};margin-bottom:8px;">Pickup window</div>
+          <div style="font-size:14.5px;color:${COLORS.ink};line-height:1.6;">${order.pickupInstructions || "Contact us to arrange a time."}</div>
+        </td>
+      </tr>
+    </table>
+    ${orderItemsTable(order)}
+    ${brassButton("View your order", `${BASE_URL}/order/${order.id}`)}
+  `;
+  return emailShell("", body);
+}
+
+export async function sendReadyForPickupEmail(order: Order): Promise<void> {
+  if (!order.userEmail) return;
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY is not set; skipping ready-for-pickup email");
+    return;
+  }
+
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: FROM_EMAIL,
+      to: order.userEmail,
+      replyTo: REPLY_TO,
+      subject: "Your Haywood Mushrooms order is ready for pickup",
+      html: buildReadyForPickupHtml(order),
+    });
+    if (error) {
+      console.error("Resend error sending ready-for-pickup email:", error);
+    }
+  } catch (err) {
+    console.error("Unexpected error sending ready-for-pickup email:", err);
   }
 }

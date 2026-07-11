@@ -27,13 +27,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { items, address, rateId, shipmentId, email: guestEmail } = (body ?? {}) as {
+  const { items, address, rateId, shipmentId, email: guestEmail, fulfillmentMethod } = (body ?? {}) as {
     items?: RequestItem[];
     address?: ShippingAddress;
     rateId?: string;
     shipmentId?: string;
     email?: string;
+    fulfillmentMethod?: "ship" | "pickup";
   };
+
+  const isPickup = fulfillmentMethod === "pickup";
 
   // Logged-in customers checkout with their account email; guests supply
   // one on the form — either way, an order needs somewhere to send the
@@ -46,14 +49,21 @@ export async function POST(request: Request) {
   if (!Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "Cart is empty." }, { status: 400 });
   }
-  if (!address?.name?.trim() || !address.street1?.trim() || !address.city?.trim() || !address.state?.trim() || !address.zip?.trim()) {
-    return NextResponse.json({ error: "A complete shipping address is required." }, { status: 400 });
-  }
-  if (typeof rateId !== "string" || !rateId) {
-    return NextResponse.json({ error: "Please select a shipping option." }, { status: 400 });
-  }
-  if (typeof shipmentId !== "string" || !shipmentId) {
-    return NextResponse.json({ error: "Please recalculate shipping and try again." }, { status: 400 });
+
+  if (isPickup) {
+    if (!address?.name?.trim()) {
+      return NextResponse.json({ error: "Your name is required." }, { status: 400 });
+    }
+  } else {
+    if (!address?.name?.trim() || !address.street1?.trim() || !address.city?.trim() || !address.state?.trim() || !address.zip?.trim()) {
+      return NextResponse.json({ error: "A complete shipping address is required." }, { status: 400 });
+    }
+    if (typeof rateId !== "string" || !rateId) {
+      return NextResponse.json({ error: "Please select a shipping option." }, { status: 400 });
+    }
+    if (typeof shipmentId !== "string" || !shipmentId) {
+      return NextResponse.json({ error: "Please recalculate shipping and try again." }, { status: 400 });
+    }
   }
 
   // A guest checking out with an email that matches an existing account
@@ -106,28 +116,36 @@ export async function POST(request: Request) {
   }
 
   let shippingRate: { provider: string; service: string; amountCents: number; estimatedDays?: number };
-  try {
-    const rate = await shippo.rates.get(rateId);
+  let shippingAddress: ShippingAddress;
 
-    // Confirm the rate actually belongs to the shipment just quoted for this
-    // cart/address — without this, a stale rateId from an earlier, different
-    // quote (e.g. a lighter cart) would still be accepted at its old price.
-    if (rate.shipment !== shipmentId) {
-      return NextResponse.json(
-        { error: "That shipping option expired. Please recalculate shipping and try again." },
-        { status: 400 }
-      );
+  if (isPickup) {
+    shippingRate = { provider: "Local pickup", service: "In person", amountCents: 0 };
+    shippingAddress = { name: address!.name.trim(), street1: "Local pickup", city: "-", state: "-", zip: "-", country: "US" };
+  } else {
+    try {
+      const rate = await shippo.rates.get(rateId!);
+
+      // Confirm the rate actually belongs to the shipment just quoted for this
+      // cart/address — without this, a stale rateId from an earlier, different
+      // quote (e.g. a lighter cart) would still be accepted at its old price.
+      if (rate.shipment !== shipmentId) {
+        return NextResponse.json(
+          { error: "That shipping option expired. Please recalculate shipping and try again." },
+          { status: 400 }
+        );
+      }
+
+      shippingRate = {
+        provider: rate.provider,
+        service: rate.servicelevel?.name ?? "Shipping",
+        amountCents: Math.round(parseFloat(rate.amount) * 100),
+        estimatedDays: rate.estimatedDays,
+      };
+    } catch (err) {
+      console.error("Failed to re-verify shipping rate:", err);
+      return NextResponse.json({ error: "That shipping option expired. Please recalculate shipping and try again." }, { status: 400 });
     }
-
-    shippingRate = {
-      provider: rate.provider,
-      service: rate.servicelevel?.name ?? "Shipping",
-      amountCents: Math.round(parseFloat(rate.amount) * 100),
-      estimatedDays: rate.estimatedDays,
-    };
-  } catch (err) {
-    console.error("Failed to re-verify shipping rate:", err);
-    return NextResponse.json({ error: "That shipping option expired. Please recalculate shipping and try again." }, { status: 400 });
+    shippingAddress = address!;
   }
 
   const subtotalCents = orderItems.reduce((sum, i) => sum + i.priceCents * i.qty, 0);
@@ -143,7 +161,7 @@ export async function POST(request: Request) {
       subtotalCents,
       shippingCents,
       totalCents,
-      shippingAddress: address,
+      shippingAddress,
       shippingRate,
     });
   } catch (err) {
@@ -154,11 +172,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 500 });
   }
 
-  // Remember this address for next time — logged-in customers only, a
-  // guest has no account to save it to. Best-effort, never blocks checkout.
-  if (user) {
+  // Remember this address for next time — logged-in customers shipping to
+  // themselves only. A guest has no account to save it to, and a pickup
+  // order's "address" is just a placeholder, not worth saving.
+  if (user && !isPickup) {
     try {
-      await saveAddress(user.uid, address);
+      await saveAddress(user.uid, address!);
     } catch (err) {
       console.error(`Failed to save address for user ${user.uid}:`, err);
     }
@@ -182,14 +201,18 @@ export async function POST(request: Request) {
           },
           quantity: item.qty,
         })),
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { name: `Shipping — ${shippingRate.provider} ${shippingRate.service}` },
-            unit_amount: shippingCents,
-          },
-          quantity: 1,
-        },
+        ...(shippingCents > 0
+          ? [
+              {
+                price_data: {
+                  currency: "usd",
+                  product_data: { name: `Shipping — ${shippingRate.provider} ${shippingRate.service}` },
+                  unit_amount: shippingCents,
+                },
+                quantity: 1,
+              },
+            ]
+          : []),
       ],
       success_url: `${origin}/order/${orderId}?success=true`,
       cancel_url: `${origin}/cart`,

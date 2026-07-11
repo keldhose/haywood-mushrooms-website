@@ -46,6 +46,10 @@ export default async function AdminOrdersPage() {
               <div className="mt-1.5 truncate text-[13px] text-muted">
                 {order.channel === "local" ? (
                   <span className="text-brass">Local — {order.paymentMethod}</span>
+                ) : order.shippingRate.provider === "Local pickup" ? (
+                  <span>
+                    {order.userEmail} <span className="text-brass">· Pickup</span>
+                  </span>
                 ) : (
                   order.userEmail
                 )}
@@ -83,6 +87,10 @@ export default async function AdminOrdersPage() {
                     {order.channel === "local" ? (
                       <span>
                         {order.buyerName} <span className="text-brass">· Local — {order.paymentMethod}</span>
+                      </span>
+                    ) : order.shippingRate.provider === "Local pickup" ? (
+                      <span>
+                        {order.userEmail} <span className="text-brass">· Pickup</span>
                       </span>
                     ) : (
                       order.userEmail

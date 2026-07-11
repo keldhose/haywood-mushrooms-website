@@ -1,7 +1,13 @@
 import "server-only";
 import { FieldValue, type Timestamp } from "firebase-admin/firestore";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
-import { sendOrderConfirmationEmail, sendShippedEmail, sendAdminOrderNotification, sendLowStockAlert } from "@/lib/email";
+import {
+  sendOrderConfirmationEmail,
+  sendShippedEmail,
+  sendAdminOrderNotification,
+  sendLowStockAlert,
+  sendReadyForPickupEmail,
+} from "@/lib/email";
 
 export type OrderItem = {
   productId: string;
@@ -62,6 +68,10 @@ export type Order = {
   stripePaymentIntentId?: string;
   /** Set from Stripe's completed session when a promotion code was applied at payment. totalCents already reflects it. */
   discountCents?: number;
+  /** Set when an admin marks a "Local pickup" order ready — triggers the ready-for-pickup email. Re-sendable (each mark-ready click sends again). */
+  readyForPickupAt?: Date | null;
+  /** Free-text pickup window/instructions set alongside readyForPickupAt, shown in the notification email. */
+  pickupInstructions?: string;
   /** When a "pending" order's stock reservation expires and can be released. Irrelevant once paid/fulfilled/cancelled. */
   expiresAt: Date | null;
   createdAt: Date | null;
@@ -91,6 +101,7 @@ export class InsufficientStockError extends Error {
 function toOrder(id: string, data: FirebaseFirestore.DocumentData): Order {
   const createdAt = data.createdAt as Timestamp | undefined;
   const expiresAt = data.expiresAt as Timestamp | undefined;
+  const readyForPickupAt = data.readyForPickupAt as Timestamp | undefined;
   return {
     id,
     userId: data.userId,
@@ -111,6 +122,8 @@ function toOrder(id: string, data: FirebaseFirestore.DocumentData): Order {
     stripeCheckoutSessionId: data.stripeCheckoutSessionId,
     stripePaymentIntentId: data.stripePaymentIntentId,
     discountCents: data.discountCents,
+    readyForPickupAt: readyForPickupAt ? readyForPickupAt.toDate() : null,
+    pickupInstructions: data.pickupInstructions,
     expiresAt: expiresAt ? expiresAt.toDate() : null,
     createdAt: createdAt ? createdAt.toDate() : null,
   };
@@ -526,4 +539,29 @@ export async function attachShippingLabel(
     shippingLabelCostCents: label.costCents,
     updatedAt: FieldValue.serverTimestamp(),
   });
+}
+
+/**
+ * Admin-only: marks a "Local pickup" order ready and emails the customer
+ * with the given pickup window/instructions. Unlike the tracking-number ->
+ * shipped-email flow (auto-detected, fires once), this is an explicit admin
+ * button click — sending again on a re-click is expected, not a duplicate
+ * bug, e.g. if the pickup window changes.
+ */
+export async function markReadyForPickup(orderId: string, instructions: string): Promise<void> {
+  const orderRef = adminDb.collection("orders").doc(orderId);
+  await orderRef.update({
+    readyForPickupAt: FieldValue.serverTimestamp(),
+    pickupInstructions: instructions,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  const order = await getOrderById(orderId);
+  if (order) {
+    try {
+      await sendReadyForPickupEmail(order);
+    } catch (err) {
+      console.error(`Failed to send ready-for-pickup email for order ${orderId}:`, err);
+    }
+  }
 }

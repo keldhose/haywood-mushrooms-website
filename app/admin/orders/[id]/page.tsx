@@ -4,6 +4,7 @@ import { getOrderById } from "@/lib/orders";
 import OrderStatusForm from "../OrderStatusForm";
 import BuyShippingLabel from "../BuyShippingLabel";
 import InvoiceActions from "../InvoiceActions";
+import PickupActions from "../PickupActions";
 
 export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,6 +13,10 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   if (!order) {
     notFound();
   }
+
+  const isLocalSale = order.channel === "local";
+  const isPickup = !isLocalSale && order.shippingRate.provider === "Local pickup";
+  const isShipped = !isLocalSale && !isPickup;
 
   return (
     <main className="px-6 py-16 md:px-10">
@@ -51,7 +56,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
               <span className="text-muted">Subtotal</span>
               <span className="text-ink">${(order.subtotalCents / 100).toFixed(2)}</span>
             </div>
-            {order.channel !== "local" && (
+            {isShipped && (
               <div className="mt-2 flex justify-between text-[14.5px]">
                 <span className="text-muted">
                   Shipping ({order.shippingRate.provider} {order.shippingRate.service})
@@ -71,7 +76,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             </div>
           </div>
 
-          {order.channel === "local" ? (
+          {isLocalSale ? (
             <div className="rounded-[3px] border border-line bg-paper p-6">
               <div className="font-serif text-[20px] text-ink">Sale details</div>
               <p className="mt-2 text-[14px] leading-[1.6] text-muted">
@@ -80,6 +85,22 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
                 <br />
                 Paid via {order.paymentMethod} · picked up in person
               </p>
+            </div>
+          ) : isPickup ? (
+            <div className="rounded-[3px] border border-line bg-paper p-6">
+              <div className="font-serif text-[20px] text-ink">Pickup</div>
+              <p className="mt-2 text-[14px] leading-[1.6] text-muted">
+                {order.shippingAddress.name}
+                {order.userEmail ? <><br />{order.userEmail}</> : null}
+                <br />
+                Paid online · picking up in person
+              </p>
+
+              {order.stripeCheckoutSessionId && (
+                <div className="mt-5 border-t border-line pt-4 font-mono text-[11px] text-muted">
+                  Stripe session: {order.stripeCheckoutSessionId}
+                </div>
+              )}
             </div>
           ) : (
             <div className="rounded-[3px] border border-line bg-paper p-6">
@@ -104,8 +125,10 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
           <OrderStatusForm orderId={order.id} status={order.status} trackingNumber={order.trackingNumber} />
-          {order.channel === "local" ? (
+          {isLocalSale ? (
             <InvoiceActions orderId={order.id} hasEmail={!!order.userEmail} />
+          ) : isPickup ? (
+            <PickupActions order={order} />
           ) : (
             <BuyShippingLabel order={order} />
           )}

@@ -20,6 +20,9 @@ export default async function OrderDetailPage({
     notFound();
   }
 
+  const isLocalSale = order.channel === "local";
+  const isPickup = !isLocalSale && order.shippingRate.provider === "Local pickup";
+
   return (
     <main className="px-6 py-24 md:px-10">
       <div className="mx-auto max-w-[700px]">
@@ -32,14 +35,19 @@ export default async function OrderDetailPage({
           <ReorderButton items={order.items} />
         </div>
 
-        {order.status === "paid" && order.channel === "local" && (
+        {order.status === "paid" && isLocalSale && (
           <div className="mt-4 rounded-[2px] border border-forest bg-paper px-4 py-3 text-[14px] text-forest">
             Payment received — paid in person via {order.paymentMethod}.
           </div>
         )}
-        {order.status === "paid" && order.channel !== "local" && (
+        {order.status === "paid" && !isLocalSale && (
           <div className="mt-4 rounded-[2px] border border-forest bg-paper px-4 py-3 text-[14px] text-forest">
             Payment received — a receipt was emailed to you by Stripe.
+          </div>
+        )}
+        {isPickup && order.readyForPickupAt && (
+          <div className="mt-3 rounded-[2px] border border-brass bg-paper px-4 py-3 text-[14px] text-ink">
+            <span className="font-semibold">Ready for pickup!</span> {order.pickupInstructions}
           </div>
         )}
         {order.status === "pending" && success === "true" && (
@@ -70,7 +78,7 @@ export default async function OrderDetailPage({
             <span className="text-muted">Subtotal</span>
             <span className="text-ink">${(order.subtotalCents / 100).toFixed(2)}</span>
           </div>
-          {order.channel !== "local" && (
+          {!isLocalSale && !isPickup && (
             <div className="mt-2 flex justify-between text-[14.5px]">
               <span className="text-muted">
                 Shipping ({order.shippingRate.provider} {order.shippingRate.service})
@@ -91,10 +99,19 @@ export default async function OrderDetailPage({
         </div>
 
         <div className="mt-6 rounded-[3px] border border-line bg-paper p-6">
-          {order.channel === "local" ? (
+          {isLocalSale ? (
             <>
               <div className="font-serif text-[20px] text-ink">Pickup</div>
               <p className="mt-2 text-[14px] leading-[1.6] text-muted">Picked up in person · paid via {order.paymentMethod}.</p>
+            </>
+          ) : isPickup ? (
+            <>
+              <div className="font-serif text-[20px] text-ink">Pickup</div>
+              <p className="mt-2 text-[14px] leading-[1.6] text-muted">
+                {order.readyForPickupAt
+                  ? order.pickupInstructions
+                  : "We'll email you as soon as it's ready to collect."}
+              </p>
             </>
           ) : (
             <>

@@ -22,6 +22,8 @@ export default async function OrderConfirmationPage({
     notFound();
   }
 
+  const isPickup = order.shippingRate.provider === "Local pickup";
+
   return (
     <main className="px-6 py-24 md:px-10">
       <div className="mx-auto max-w-[700px]">
@@ -37,6 +39,11 @@ export default async function OrderConfirmationPage({
         {order.status === "paid" && (
           <div className="mt-4 rounded-[2px] border border-forest bg-paper px-4 py-3 text-[14px] text-forest">
             Payment received — a receipt was emailed to you by Stripe.
+          </div>
+        )}
+        {isPickup && order.readyForPickupAt && (
+          <div className="mt-3 rounded-[2px] border border-brass bg-paper px-4 py-3 text-[14px] text-ink">
+            <span className="font-semibold">Ready for pickup!</span> {order.pickupInstructions}
           </div>
         )}
         {order.status === "pending" && success === "true" && (
@@ -67,12 +74,14 @@ export default async function OrderConfirmationPage({
             <span className="text-muted">Subtotal</span>
             <span className="text-ink">${(order.subtotalCents / 100).toFixed(2)}</span>
           </div>
-          <div className="mt-2 flex justify-between text-[14.5px]">
-            <span className="text-muted">
-              Shipping ({order.shippingRate.provider} {order.shippingRate.service})
-            </span>
-            <span className="text-ink">${(order.shippingCents / 100).toFixed(2)}</span>
-          </div>
+          {!isPickup && (
+            <div className="mt-2 flex justify-between text-[14.5px]">
+              <span className="text-muted">
+                Shipping ({order.shippingRate.provider} {order.shippingRate.service})
+              </span>
+              <span className="text-ink">${(order.shippingCents / 100).toFixed(2)}</span>
+            </div>
+          )}
           {order.discountCents ? (
             <div className="mt-2 flex justify-between text-[14.5px]">
               <span className="text-forest">Discount</span>
@@ -86,15 +95,28 @@ export default async function OrderConfirmationPage({
         </div>
 
         <div className="mt-6 rounded-[3px] border border-line bg-paper p-6">
-          <div className="font-serif text-[20px] text-ink">Shipping to</div>
-          <p className="mt-2 text-[14px] leading-[1.6] text-muted">
-            {order.shippingAddress.name}
-            <br />
-            {order.shippingAddress.street1}
-            {order.shippingAddress.street2 ? `, ${order.shippingAddress.street2}` : ""}
-            <br />
-            {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
-          </p>
+          {isPickup ? (
+            <>
+              <div className="font-serif text-[20px] text-ink">Pickup</div>
+              <p className="mt-2 text-[14px] leading-[1.6] text-muted">
+                {order.readyForPickupAt
+                  ? order.pickupInstructions
+                  : "We'll email you as soon as it's ready to collect."}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="font-serif text-[20px] text-ink">Shipping to</div>
+              <p className="mt-2 text-[14px] leading-[1.6] text-muted">
+                {order.shippingAddress.name}
+                <br />
+                {order.shippingAddress.street1}
+                {order.shippingAddress.street2 ? `, ${order.shippingAddress.street2}` : ""}
+                <br />
+                {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
+              </p>
+            </>
+          )}
           {order.trackingNumber && (
             <div className="mt-4 border-t border-line pt-4">
               <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">Tracking number</div>
