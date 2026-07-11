@@ -22,6 +22,9 @@ export type CartItem = {
   imageUrl: string;
   weightOz: number;
   bulkTiers?: BulkTier[];
+  /** Marks this line as a special/limited-batch pre-order rather than ready-to-ship stock. */
+  isPreorder?: boolean;
+  preorderEstimate?: string;
   qty: number;
 };
 
@@ -72,6 +75,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
             weightOz: raw.weightOz as number,
             basePriceCents,
             bulkTiers,
+            isPreorder: raw.isPreorder as boolean | undefined,
+            preorderEstimate: raw.preorderEstimate as string | undefined,
             qty,
             priceCents: effectivePriceCents(basePriceCents, bulkTiers, qty),
           };

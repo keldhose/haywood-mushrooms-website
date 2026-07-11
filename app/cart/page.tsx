@@ -51,6 +51,11 @@ export default function CartPage() {
                   <div className="text-[15px] font-medium text-ink">
                     {item.name}
                     {item.variantLabel && <span className="text-muted"> — {item.variantLabel}</span>}
+                    {item.isPreorder && (
+                      <span className="ml-2 rounded-[2px] bg-brass px-[7px] py-[2px] align-middle font-mono text-[9.5px] uppercase tracking-[0.08em] text-forest-deep">
+                        Pre-order
+                      </span>
+                    )}
                   </div>
                   <div className="mt-1 font-mono text-[13px] text-muted">
                     ${(item.priceCents / 100).toFixed(2)} each
@@ -60,6 +65,9 @@ export default function CartPage() {
                       </span>
                     )}
                   </div>
+                  {item.isPreorder && item.preorderEstimate && (
+                    <div className="mt-1 text-[12px] text-muted">{item.preorderEstimate}</div>
+                  )}
                 </div>
               </div>
 

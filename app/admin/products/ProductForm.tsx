@@ -56,6 +56,8 @@ export default function ProductForm({
       discountPercent: t.discountPercent.toString(),
     }))
   );
+  const [isPreorder, setIsPreorder] = useState(product?.isPreorder ?? false);
+  const [preorderEstimate, setPreorderEstimate] = useState(product?.preorderEstimate ?? "");
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -175,6 +177,8 @@ export default function ProductForm({
       active,
       variants: cleanVariants,
       bulkTiers: cleanBulkTiers,
+      isPreorder,
+      preorderEstimate: isPreorder ? preorderEstimate.trim() : "",
     };
 
     try {
@@ -501,6 +505,32 @@ export default function ProductForm({
                 </button>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 rounded-[2px] border border-line bg-paper p-4">
+        <label className="flex items-center gap-2.5 text-[14px] text-ink">
+          <input type="checkbox" checked={isPreorder} onChange={(e) => setIsPreorder(e.target.checked)} />
+          This is a pre-order (special/limited batch)
+        </label>
+        <p className="mt-1.5 pl-[26px] text-[12.5px] text-muted">
+          {hasVariants ? "Variant stock" : "Stock qty"} above represents pre-order slots, not ready-to-ship inventory.
+          Shown as &ldquo;Pre-order&rdquo; in the shop instead of &ldquo;In stock.&rdquo;
+        </p>
+
+        {isPreorder && (
+          <div className="mt-3 pl-[26px]">
+            <label className="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">
+              Shipping estimate
+            </label>
+            <input
+              type="text"
+              placeholder="Ships in ~4-6 weeks"
+              value={preorderEstimate}
+              onChange={(e) => setPreorderEstimate(e.target.value)}
+              className="w-full max-w-[320px] rounded-[2px] border border-line bg-cream p-[10px] text-[13.5px] outline-none focus:border-forest"
+            />
           </div>
         )}
       </div>

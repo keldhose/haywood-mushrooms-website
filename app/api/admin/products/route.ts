@@ -55,8 +55,20 @@ function validateBulkTiers(input: unknown): BulkTier[] | null {
 }
 
 export function validateProductPayload(body: unknown) {
-  const { name, scientificName, description, priceCents, stockQty, weightOz, imageUrls, active, variants, bulkTiers } =
-    (body ?? {}) as Record<string, unknown>;
+  const {
+    name,
+    scientificName,
+    description,
+    priceCents,
+    stockQty,
+    weightOz,
+    imageUrls,
+    active,
+    variants,
+    bulkTiers,
+    isPreorder,
+    preorderEstimate,
+  } = (body ?? {}) as Record<string, unknown>;
 
   const cleanImageUrls = Array.isArray(imageUrls)
     ? imageUrls.filter((u): u is string => typeof u === "string" && u.trim().length > 0).map((u) => u.trim())
@@ -98,6 +110,8 @@ export function validateProductPayload(body: unknown) {
     imageUrls: cleanImageUrls,
     active: active !== false,
     variants: cleanVariants,
+    isPreorder: isPreorder === true,
+    preorderEstimate: typeof preorderEstimate === "string" ? preorderEstimate.trim() : "",
   };
 }
 
@@ -127,11 +141,12 @@ export async function POST(request: Request) {
     slug = `${baseSlug}-${suffix}`;
   }
 
-  const { variants, bulkTiers, ...rest } = product;
+  const { variants, bulkTiers, preorderEstimate, ...rest } = product;
   const docData = {
     ...rest,
     ...(variants.length > 0 ? { variants } : {}),
     ...(bulkTiers.length > 0 ? { bulkTiers } : {}),
+    ...(preorderEstimate ? { preorderEstimate } : {}),
   };
   await adminDb.collection("products").doc(slug).set(docData);
 

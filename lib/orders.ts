@@ -17,6 +17,9 @@ export type OrderItem = {
   priceCents: number;
   /** Snapshot of the item's per-unit weight at checkout, for buying a shipping label later. Absent on orders placed before this existed. */
   weightOz?: number;
+  /** Snapshot of the product's pre-order status/estimate at purchase time — the product's own flag may change later (e.g. once the batch is fulfilled). */
+  isPreorder?: boolean;
+  preorderEstimate?: string;
   qty: number;
 };
 

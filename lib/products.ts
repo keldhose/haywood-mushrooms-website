@@ -28,6 +28,10 @@ export type Product = {
   variants?: ProductVariant[];
   /** Optional quantity-break discounts — same schedule applies to whichever variant is being bought. */
   bulkTiers?: BulkTier[];
+  /** Marks this as a special/limited-batch listing, not ready-to-ship stock. stockQty represents pre-order slots, not on-hand inventory. */
+  isPreorder?: boolean;
+  /** Free-text shipping estimate shown to customers, e.g. "Ships in ~4-6 weeks". Only meaningful when isPreorder is true. */
+  preorderEstimate?: string;
 };
 
 function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
@@ -63,6 +67,8 @@ function toProduct(id: string, data: FirebaseFirestore.DocumentData): Product {
     active: data.active !== false,
     variants,
     bulkTiers: Array.isArray(data.bulkTiers) && data.bulkTiers.length > 0 ? data.bulkTiers : undefined,
+    isPreorder: data.isPreorder === true,
+    preorderEstimate: data.preorderEstimate || undefined,
   };
 }
 

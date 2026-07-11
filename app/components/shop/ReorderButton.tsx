@@ -18,6 +18,8 @@ type RemoteProduct = {
   stockQty: number;
   variants?: RemoteVariant[];
   bulkTiers?: BulkTier[];
+  isPreorder?: boolean;
+  preorderEstimate?: string;
 };
 
 export default function ReorderButton({ items }: { items: OrderItem[] }) {
@@ -83,6 +85,8 @@ export default function ReorderButton({ items }: { items: OrderItem[] }) {
             bulkTiers: product.bulkTiers,
             imageUrl: product.imageUrl,
             weightOz,
+            isPreorder: product.isPreorder,
+            preorderEstimate: product.preorderEstimate,
           },
           Math.min(item.qty, stockQty)
         );

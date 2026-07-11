@@ -135,6 +135,8 @@ export default function AddToCart({
         bulkTiers,
         imageUrl: product.imageUrl,
         weightOz: selected.weightOz,
+        isPreorder: product.isPreorder,
+        preorderEstimate: product.preorderEstimate,
       },
       qty
     );
@@ -149,6 +151,11 @@ export default function AddToCart({
 
   return (
     <div>
+      {product.isPreorder && (
+        <div className="mb-1.5 inline-block rounded-[2px] bg-brass px-[9px] py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-forest-deep">
+          Pre-order
+        </div>
+      )}
       <div className="flex items-baseline gap-2">
         <div className={compact ? "font-serif text-[22px] text-ink" : "font-serif text-[32px] text-ink"}>
           ${(effectivePriceCents / 100).toFixed(2)}
@@ -167,8 +174,15 @@ export default function AddToCart({
       {!compact && (
         <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
           {(selected.weightOz / 16).toFixed(1)} lb ·{" "}
-          {selected.stockQty > 0 ? `${selected.stockQty} in stock` : "Out of stock"}
+          {selected.stockQty > 0
+            ? product.isPreorder
+              ? `${selected.stockQty} pre-order slots left`
+              : `${selected.stockQty} in stock`
+            : "Out of stock"}
         </div>
+      )}
+      {product.isPreorder && product.preorderEstimate && (
+        <div className="mt-1.5 text-[12.5px] text-muted">{product.preorderEstimate}</div>
       )}
       {!compact && bulkTiers && bulkTiers.length > 0 && (
         <div className="mt-3 rounded-[2px] border border-dashed border-brass/50 bg-cream px-3 py-2.5 font-mono text-[11px] text-muted">
@@ -250,7 +264,7 @@ export default function AddToCart({
               onClick={handleAdd}
               className="flex-1 justify-center rounded-[2px] bg-brass px-[22px] py-[13px] text-[14.5px] font-semibold text-forest-deep transition hover:brightness-[1.06]"
             >
-              {added ? "Added ✓" : "Add to cart"}
+              {added ? "Added ✓" : product.isPreorder ? "Pre-order" : "Add to cart"}
             </button>
           </div>
         )}

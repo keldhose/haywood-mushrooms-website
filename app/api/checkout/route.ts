@@ -111,6 +111,8 @@ export async function POST(request: Request) {
       name: product.name,
       priceCents: variant.priceCents,
       weightOz: variant.weightOz,
+      isPreorder: product.isPreorder,
+      preorderEstimate: product.preorderEstimate,
       qty: item.qty,
     });
   }
